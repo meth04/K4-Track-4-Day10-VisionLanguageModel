@@ -258,7 +258,7 @@ Chỉ đổi lượng dữ liệu: 10% và 100% train. Giữ setup {baseline.upp
 
 Khởi tạo từ checkpoint SFT chọn bằng validation, dùng reward IoU cùng lớp, ghép tham lam với IoU≥0,5, phạt box thừa qua mẫu số. Các test gồm hoàn hảo, JSON hỏng, sai lớp, box thừa, rỗng và box lớn. GRPO dùng 4 generations, tối đa 128 token, beta=0, LR=5e-6, 60 bước, use_vllm=False. Log thật ở `report/logs/e5/grpo.log.json`. {comparison_lines[4]}
 
-Kiểm tra reward hacking trên output test thật: {json.dumps(hacks,ensure_ascii=False)}. Tỷ lệ trả [] và box phủ ít nhất 50% ảnh được đối chiếu với SFT; không kết luận chỉ từ reward tăng vì model có thể tận dụng thành phần thưởng JSON hợp lệ. Max completion 128 còn có thể cắt đầu ra có nhiều đối tượng; tỷ lệ parse hợp lệ và FP/FN giúp phát hiện giới hạn đó.
+Kiểm tra reward hacking trên output test thật: {json.dumps(hacks,ensure_ascii=False)}. Tỷ lệ trả [] và box có diện tích tương đương ít nhất 50% khung hình được đối chiếu với SFT; không kết luận chỉ từ reward tăng vì model có thể tận dụng thành phần thưởng JSON hợp lệ. Max completion 128 còn có thể cắt đầu ra có nhiều đối tượng; tỷ lệ parse hợp lệ và FP/FN giúp phát hiện giới hạn đó.
 
 ## Nhìn lại
 
