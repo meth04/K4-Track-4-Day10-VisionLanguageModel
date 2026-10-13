@@ -32,7 +32,11 @@ def persist_base_snapshot(model):
     if mounted:
         source = mounted[0].parent
     else:
-        source = snapshot_download(MODEL_ID, revision=model.config.lab_model_revision, local_files_only=True)
+        # New huggingface_hub verifies that the whole snapshot is complete,
+        # including README/.gitattributes that from_pretrained does not fetch.
+        # Network remains enabled on Kaggle; cached weights are reused and only
+        # those missing repository files need downloading.
+        source = snapshot_download(MODEL_ID, revision=model.config.lab_model_revision)
     shutil.copytree(source, destination, symlinks=False, dirs_exist_ok=True)
     (destination / "revision.txt").write_text(model.config.lab_model_revision, encoding="utf-8")
 
