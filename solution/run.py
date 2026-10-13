@@ -164,6 +164,14 @@ def main():
         print("SMOKE PASS", flush=True)
     elif args.phase == "e0":
         model, processor = load_base()
+        # Persist the original HF snapshot on Kaggle only. Later kernels attach
+        # E0 output and load directly, avoiding repeated GPU-time downloads.
+        from huggingface_hub import snapshot_download
+        import shutil
+        snapshot = snapshot_download("Qwen/Qwen3-VL-4B-Instruct", revision=model.config.lab_model_revision, local_files_only=True)
+        destination = Path("/kaggle/working/base_model")
+        shutil.copytree(snapshot, destination, symlinks=False, dirs_exist_ok=True)
+        (destination / "revision.txt").write_text(model.config.lab_model_revision, encoding="utf-8")
         dataset = SupervisedDataset(read_jsonl("data/splits/train.jsonl")[:1], processor)
         diagnose(dataset, processor, model.config, "report/evidence/supervision.json")
         test = read_jsonl("data/splits/test.jsonl")

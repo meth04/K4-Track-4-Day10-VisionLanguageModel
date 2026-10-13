@@ -111,9 +111,10 @@ def main():
         remote_phase(args.owner,"smoke",[],state)
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
             for pair in (("e0","e1"),("e2","e3")):
-                futures=[pool.submit(remote_phase,args.owner,phase,[],state) for phase in pair]
+                source=[] if pair==("e0","e1") else [f"{args.owner}/day10-qwen3vl-e0"]
+                futures=[pool.submit(remote_phase,args.owner,phase,source,state) for phase in pair]
                 for future in futures: future.result()
-            baselines=[f"{args.owner}/day10-qwen3vl-{name}" for name in ("e1","e2","e3")]
+            baselines=[f"{args.owner}/day10-qwen3vl-{name}" for name in ("e0","e1","e2","e3")]
             futures=[pool.submit(remote_phase,args.owner,phase,baselines,state) for phase in ("e4","e5")]
             for future in futures: future.result()
         sources=[f"{args.owner}/day10-qwen3vl-{name}" for name in ("preflight","e0","e1","e2","e3","e4","e5")]

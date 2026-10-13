@@ -19,13 +19,20 @@ def load_base():
     from transformers import AutoProcessor, BitsAndBytesConfig, Qwen3VLForConditionalGeneration
     if not torch.cuda.is_available():
         raise RuntimeError("Training/inference requires the Kaggle GPU. Never run on the local machine.")
-    revision = HfApi().model_info(MODEL_ID).sha
+    cached = sorted(Path("/kaggle/input").rglob("base_model/revision.txt"))
+    cached += [p for p in (Path("/kaggle/working/base_model/revision.txt"),) if p.exists()]
+    if cached:
+        source = str(cached[0].parent)
+        revision = cached[0].read_text(encoding="utf-8").strip()
+    else:
+        source = MODEL_ID
+        revision = HfApi().model_info(MODEL_ID).sha
     # Transformers 5.19 matches prefixes against fully qualified names; "visual"
     # alone no longer excludes model.visual.blocks.*. Include the full prefix.
     quantization = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True, llm_int8_skip_modules=["model.visual", "visual", "lm_head"])
-    model = Qwen3VLForConditionalGeneration.from_pretrained(MODEL_ID, revision=revision, quantization_config=quantization, dtype=torch.float16, device_map={"": 0}, attn_implementation="sdpa")
+    model = Qwen3VLForConditionalGeneration.from_pretrained(source, revision=revision, quantization_config=quantization, dtype=torch.float16, device_map={"": 0}, attn_implementation="sdpa")
     model.config.lab_model_revision = revision
-    processor = AutoProcessor.from_pretrained(MODEL_ID, revision=revision)
+    processor = AutoProcessor.from_pretrained(source, revision=revision)
     processor.tokenizer.padding_side = "left"
     for name, module in model.named_modules():
         if name.startswith("model.visual.") and type(module).__name__ == "Linear4bit":
