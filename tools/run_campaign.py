@@ -94,6 +94,7 @@ def collect_submission(owner):
     # These are genuine newly measured results, not synthetic commit padding.
     subprocess.run(["git","add","REPORT.md","report"],cwd=ROOT,check=True)
     subprocess.run(["git","commit","-m","results: record measured Kaggle experiments, bonus GRPO and report"],cwd=ROOT,check=True)
+    subprocess.run(["git","push","origin","main"],cwd=ROOT,check=True)
 
 
 def main():

@@ -12,7 +12,7 @@ Huấn luyện, suy luận, dữ liệu và trọng số nằm trên Kaggle. Má
 python tools/run_campaign.py --smoke-already-submitted
 ```
 
-Bộ điều khiển đợi smoke test thành công, chạy E0/E1 rồi E2/E3 (tối đa hai notebook cùng lúc), chạy E4/E5 từ các output baseline, rồi tạo báo cáo trên CPU Kaggle. Trạng thái lưu ở `work/campaign/state.json`; có thể chạy lại lệnh để tiếp tục các phase đang chạy hoặc đã hoàn tất. Phase lỗi dừng chiến dịch để sửa; không tự sinh hoặc thay thế số liệu.
+Bộ điều khiển đợi smoke test thành công, chạy E0/E1 rồi E2/E3 (tối đa hai notebook cùng lúc), chạy E4/E5 từ các output baseline, rồi tạo báo cáo trên CPU Kaggle. Sau khi các kiểm tra rubric đạt, nó commit và đẩy kết quả lên GitHub. Trạng thái lưu ở `work/campaign/state.json`; có thể chạy lại lệnh để tiếp tục các phase đang chạy hoặc đã hoàn tất. Phase lỗi dừng chiến dịch để sửa; không tự sinh hoặc thay thế số liệu.
 
 E4 chọn `data_size`: 10% và 100%. Baseline tốt nhất được chọn bằng validation. Điều kiện 100% tái sử dụng đúng baseline; điều kiện 10% huấn luyện riêng 300 bước. E5 dùng TRL 1.9.2, GRPO 60 bước, reward IoU đã có test.
 
