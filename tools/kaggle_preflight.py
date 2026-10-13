@@ -28,7 +28,9 @@ def main():
     architecture = {"total": sum(p.numel() for p in model.parameters())}
     for name in ("visual", "visual.merger", "visual.deepstack_merger_list", "language_model"):
         architecture[name] = sum(p.numel() for n, p in model.named_parameters() if n.startswith("model." + name + "."))
-    result = {"gpu": torch.cuda.get_device_name(0), "gpu_memory_gb": torch.cuda.get_device_properties(0).total_memory / 2**30, "packages": {p: importlib.metadata.version(p) for p in ("torch", "torchvision", "transformers", "peft", "trl", "bitsandbytes", "accelerate")}, "dataset": meta, "architecture": architecture, "module_names": names, "processor_class": type(processor).__name__}
+    from solution.modeling import apply_setup
+    _, setup_info = apply_setup(model, "e3")
+    result = {"gpu": torch.cuda.get_device_name(0), "gpu_memory_gb": torch.cuda.get_device_properties(0).total_memory / 2**30, "packages": {p: importlib.metadata.version(p) for p in ("torch", "torchvision", "transformers", "peft", "trl", "bitsandbytes", "accelerate")}, "dataset": meta, "architecture": architecture, "module_names": names, "processor_class": type(processor).__name__, "e3_meta_setup": setup_info}
     Path("report/evidence").mkdir(parents=True, exist_ok=True)
     Path("report/evidence/preflight.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(json.dumps({k:v for k,v in result.items() if k not in ("module_names", "dataset")}, indent=2))

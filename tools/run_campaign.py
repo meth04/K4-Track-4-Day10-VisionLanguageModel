@@ -42,6 +42,8 @@ def remote_phase(owner,phase,sources,state):
         current=cli("kernels","status",ref)
         if any(word in current for word in ("ERROR","CANCEL","FAILED")):
             raise RuntimeError(f"{phase} still failed. Push the repaired phase manually before resuming.")
+        state["phases"][phase]["status"]="submitted"
+        save(state)
     if not prior:
         directory,_=build(owner,phase,sources)
         command=["kernels","push","-p",str(directory)]
@@ -104,6 +106,7 @@ def main():
     args=parser.parse_args()
     state=json.loads(STATE_PATH.read_text(encoding="utf-8")) if STATE_PATH.exists() else {"phases":{},"status":"running"}
     state["status"]="running"
+    state.pop("error",None)
     if args.smoke_already_submitted and "smoke" not in state["phases"]:
         state["phases"]["smoke"]={"status":"submitted","ref":f"{args.owner}/day10-qwen3vl-smoke"}
     save(state)
