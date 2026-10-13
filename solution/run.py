@@ -116,7 +116,7 @@ def grpo_phase(steps=60):
     config = GRPOConfig(output_dir=str(directory / "trainer"), max_steps=steps, learning_rate=5e-6, per_device_train_batch_size=1, gradient_accumulation_steps=4, generation_batch_size=4, num_generations=4, max_completion_length=128, beta=0.0, use_vllm=False, fp16=True, bf16=False, gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant": False}, loss_type="grpo", remove_unused_columns=False, report_to="none", logging_steps=1, save_strategy="no", seed=42, dataloader_num_workers=0, log_completions=True, log_multimodal=False, model_init_kwargs=None)
     start = time.perf_counter()
     torch.cuda.reset_peak_memory_stats()
-    info = {**original, "base_setup": setup, "selection_split": "val", "selection_candidates": candidates, "num_generations": 4, "max_completion_length": 128, "grpo_steps": steps}
+    info = {**original, "base_setup": setup, "selection_split": "val", "selection_candidates": candidates, "num_generations": 4, "max_completion_length": 128, "grpo_steps": steps, "initialization_checkpoint_step":original.get('step'), "lr":5e-6, "batch_size":1, "grad_accum":4, "max_steps":steps}
 
     class ProjectorCheckpoint(TrainerCallback):
         def on_step_end(self, args, state, control, **kwargs):
