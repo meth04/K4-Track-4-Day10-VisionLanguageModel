@@ -74,7 +74,7 @@ def remote_phase(owner,phase,sources,state):
         time.sleep(45)
 
 
-def collect_submission(owner,phase='report'):
+def collect_submission(owner,phase='report',include_bonus=True):
     subprocess.run([sys.executable,"tools/kaggle_control.py","collect","--phase",phase,"--owner",owner],cwd=ROOT,check=True)
     import shutil
     download=ROOT/"work/downloads"/phase
@@ -92,10 +92,16 @@ def collect_submission(owner,phase='report'):
     changed=subprocess.run(["git","diff","c2f3997","--","scripts","tests"],cwd=ROOT,capture_output=True,text=True,check=True).stdout
     if changed:
         raise RuntimeError("Instructor scripts/tests changed; stop before submission.")
-    subprocess.run([sys.executable,"tools/check_rubric.py"],cwd=ROOT,check=True)
+    audit_command=[sys.executable,"tools/check_rubric.py"]
+    if not include_bonus: audit_command.append('--core-only')
+    subprocess.run(audit_command,cwd=ROOT,check=True)
     # These are genuine newly measured results, not synthetic commit padding.
     subprocess.run(["git","add","REPORT.md","report"],cwd=ROOT,check=True)
-    subprocess.run(["git","commit","-m","results: record measured Kaggle experiments, bonus GRPO and report"],cwd=ROOT,check=True)
+    message="results: record measured Kaggle experiments and report"
+    if include_bonus: message="results: add measured GRPO bonus and confidence intervals"
+    staged=subprocess.run(["git","diff","--cached","--quiet"],cwd=ROOT)
+    if staged.returncode:
+        subprocess.run(["git","commit","-m",message],cwd=ROOT,check=True)
     subprocess.run(["git","push","origin","main"],cwd=ROOT,check=True)
 
 
@@ -104,6 +110,7 @@ def main():
     parser.add_argument("--owner",default="soobinms")
     parser.add_argument("--smoke-already-submitted",action="store_true")
     parser.add_argument("--cloud-workflow",action="store_true",help='Run E1–E5 and report within one Kaggle session; no local per-phase control needed.')
+    parser.add_argument("--fast",action="store_true",help="Keep two Kaggle GPU notebooks busy; export the core report before the bonus finishes.")
     args=parser.parse_args()
     state=json.loads(STATE_PATH.read_text(encoding="utf-8")) if STATE_PATH.exists() else {"phases":{},"status":"running"}
     state["status"]="running"
@@ -113,6 +120,33 @@ def main():
     save(state)
     try:
         remote_phase(args.owner,"smoke",[],state)
+        if args.fast:
+            remote_phase(args.owner,"e0",[],state)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+                source=[f"{args.owner}/day10-qwen3vl-e0"]
+                futures=[pool.submit(remote_phase,args.owner,phase,source,state) for phase in ("e1","e2","e3")]
+                for future in concurrent.futures.as_completed(futures): future.result()
+                baselines=[f"{args.owner}/day10-qwen3vl-{name}" for name in ("e0","e1","e2","e3")]
+                e4=pool.submit(remote_phase,args.owner,"e4",baselines,state)
+                e5=pool.submit(remote_phase,args.owner,"e5",baselines,state)
+                e4.result()
+                sources=[f"{args.owner}/day10-qwen3vl-{name}" for name in ("preflight","smoke","e0","e1","e2","e3","e4")]
+                if not state.get("core_exported"):
+                    remote_phase(args.owner,"report",sources,state)
+                    collect_submission(args.owner,include_bonus=False)
+                    state["core_exported"]=True
+                    save(state)
+                    print("CORE REPORT EXPORTED. Finishing the GRPO bonus.",flush=True)
+                e5.result()
+            # Report version 2 adds actual E5 output; never rerun any test set.
+            state["phases"].pop("report",None)
+            save(state)
+            remote_phase(args.owner,"report",sources+[f"{args.owner}/day10-qwen3vl-e5"],state)
+            collect_submission(args.owner)
+            state["status"]="complete"
+            save(state)
+            print("CAMPAIGN COMPLETE: measured core and bonus evidence passed the rubric checks.",flush=True)
+            return
         if args.cloud_workflow:
             remote_phase(args.owner,'e0',[f'{args.owner}/day10-qwen3vl-smoke'],state)
             sources=[f'{args.owner}/day10-qwen3vl-e0',f'{args.owner}/day10-qwen3vl-preflight']

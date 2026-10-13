@@ -24,7 +24,7 @@ def measure_e0_resources():
     entries=read_jsonl(ROOT/'data/splits/val.jsonl')[:4]
     model,processor=load_base()
     torch.cuda.reset_peak_memory_stats()
-    _,seconds=generate(model,processor,entries,ROOT/'work/e0_resource_val.jsonl')
+    _,seconds=generate(model,processor,entries,ROOT/'work/e0_resource_val.jsonl',batch_size=4)
     measured={'dataset_version':meta['dataset_version'],'split':'val','n_images':len(entries),'image_ids':[e['image_id'] for e in entries],'batch_size':4,'max_new_tokens':512,'peak_vram_gb':torch.cuda.max_memory_allocated()/2**30,'inference_minutes':seconds/60,'scope':'Four validation images; E0 test predictions are reused without new test inference.'}
     write_json(ROOT/'report/evidence/e0_resource_probe.json',measured)
     del model,processor

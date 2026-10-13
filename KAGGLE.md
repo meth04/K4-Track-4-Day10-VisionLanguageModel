@@ -8,6 +8,16 @@ Huấn luyện, suy luận, dữ liệu và trọng số nằm trên Kaggle. Má
 
 ## Chạy tự động
 
+Để hoàn tất nhanh với tối đa hai notebook GPU đồng thời:
+
+```powershell
+python tools/run_campaign.py --fast
+```
+
+E1–E3 chạy khi có chỗ trống, sau đó E4 và E5 chạy song song. Báo cáo phần bắt buộc được tải về, kiểm tra và đẩy lên GitHub khi E4 xong; báo cáo cuối bổ sung E5 sau khi bonus hoàn tất. Suy luận dùng batch tối đa tám ảnh và giảm tự động nếu thiếu VRAM. Các lượt đã hoàn tất được tái sử dụng theo trạng thái chiến dịch.
+
+Để chạy tuần tự trong một phiên Kaggle:
+
 ```powershell
 python tools/run_campaign.py --smoke-already-submitted --cloud-workflow
 ```

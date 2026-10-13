@@ -74,6 +74,11 @@ def sft_phase(setup, name=None, fraction=1.0, steps=300):
     dev = [val[i] for i in sorted(indices)]
     seed_everything()
     base, processor = load_base()
+    if setup=='e3' and name=='e3':
+        import torch
+        torch.cuda.reset_peak_memory_stats()
+        _,probe_seconds=generate(base,processor,val[:4],'work/e0_resource_val.jsonl',batch_size=4)
+        write_json('report/evidence/e0_resource_probe.json',{'split':'val','n_images':4,'image_ids':[e['image_id'] for e in val[:4]],'batch_size':4,'max_new_tokens':512,'peak_vram_gb':torch.cuda.max_memory_allocated()/2**30,'inference_minutes':probe_seconds/60,'scope':'Original E0 weights, four validation images, no repeated test inference.'})
     model, info = apply_setup(base, setup)
     info["train_fraction"] = fraction
     info["ablation_variable"] = "data_size" if fraction < 1 else "none"
@@ -81,6 +86,7 @@ def sft_phase(setup, name=None, fraction=1.0, steps=300):
     # Configured batch=2, accumulation=4; project only supervised logits so
     # masked image/prompt tokens don't allocate large vocabulary tensors.
     info['loss_implementation']='response logits only; equivalent shifted cross entropy'
+    info['inference_batch_size_requested']=8
     meta = train_sft(model, processor, train, dev, f"artifacts/{name}", info, steps=steps, batch_size=2, grad_accum=4)
     del model, base, processor
     release_memory()

@@ -74,7 +74,7 @@ def diagnose(dataset, processor, config, output):
     write_json(output, {"image_id": dataset.entries[0]["image_id"], "vision_tokens": image_tokens, "masked_tokens": int((labels == -100).sum()), "supervised_tokens": int((labels != -100).sum()), "decoded_supervision": decoded, "answer": expected})
 
 
-def generate(model, processor, entries, output, coord="norm1000", batch_size=4, max_new_tokens=512, resume=False):
+def generate(model, processor, entries, output, coord="norm1000", batch_size=8, max_new_tokens=512, resume=False):
     import torch
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)

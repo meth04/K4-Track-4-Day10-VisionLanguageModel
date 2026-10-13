@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT))
 from scripts.check_submission import run_checks
 
 
-def audit(root=ROOT):
+def audit(root=ROOT, include_bonus=True):
     root=Path(root)
     checks=run_checks(root)
     def add(ok,name,detail):
@@ -27,13 +27,14 @@ def audit(root=ROOT):
     add(all(n in evidence for n in ("e4_data_size_0.1","e4_data_size_1.0")),"E4 both data sizes","10% and 100%")
     images=list((root/"report/figures").glob("example_*.png"))
     add(len(images)>=6,"Annotated examples >= 6",str(len(images)))
-    add((root/"report/logs/e5/grpo.log.json").exists() and "e5" in evidence,"E5 bonus logs and official test evidence","")
+    if include_bonus:
+        add((root/"report/logs/e5/grpo.log.json").exists() and "e5" in evidence,"E5 bonus logs and official test evidence","")
     add((root/"report/evidence/paired_comparisons.json").exists(),"Paired confidence intervals","")
     return checks
 
 
 def main():
-    checks=audit()
+    checks=audit(include_bonus='--core-only' not in sys.argv)
     for status,name,detail in checks:
         print(f"[{status}] {name}"+(f" — {detail}" if detail else ""))
     failures=sum(s=="FAIL" for s,_,_ in checks)

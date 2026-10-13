@@ -119,7 +119,13 @@ def error_breakdown(entries, predictions):
 
 
 def build_report():
-    required=("e0","e1","e2","e3","e4_data_size_0.1","e4_data_size_1.0","e5")
+    required=["e0","e1","e2","e3","e4_data_size_0.1","e4_data_size_1.0"]
+    try:
+        locate('report/evidence/e5.json')
+        required.append('e5')
+    except FileNotFoundError:
+        pass
+    has_bonus='e5' in required
     evidence={}
     for name in required:
         source=locate(f"report/evidence/{name}.json")
@@ -132,6 +138,19 @@ def build_report():
         raise ValueError("Different dataset versions in report sources.")
     preflight=json.loads(locate("report/evidence/preflight.json").read_text(encoding="utf-8"))
     write_json("report/evidence/preflight.json",preflight)
+    try:
+        equivalence=json.loads(locate('report/evidence/loss_equivalence.json').read_text(encoding='utf-8'))
+        if not equivalence['passed']:
+            raise ValueError('GPU loss equivalence check failed.')
+        write_json('report/evidence/loss_equivalence.json',equivalence)
+    except FileNotFoundError:
+        pass
+    try:
+        probe=locate('report/evidence/e0_resource_probe.json')
+        resource=json.loads(probe.read_text(encoding='utf-8'))
+        write_json('report/evidence/e0_resource_probe.json',resource)
+    except FileNotFoundError:
+        pass
     student=yaml.safe_load(Path("configs/student.yaml").read_text(encoding="utf-8"))
     test=read_jsonl("data/splits/test.jsonl")
     predictions={name:{r["image_id"]:r["raw"] for r in read_jsonl(locate(f"work/{name}.jsonl"))} for name in required if name != "e4_data_size_1.0"}
@@ -157,7 +176,9 @@ def build_report():
     wrong=evaluate(test,predictions[baseline],coord="pixel")
     write_json("report/evidence/wrong_coordinate_scale.json",wrong)
     comparisons={}
-    for first,second in (("e0","e1"),("e1","e2"),("e2","e3"),("e4_data_size_0.1","e4_data_size_1.0"),(baseline,"e5")):
+    pairs=[("e0","e1"),("e1","e2"),("e2","e3"),("e4_data_size_0.1","e4_data_size_1.0")]
+    if has_bonus: pairs.append((baseline,'e5'))
+    for first,second in pairs:
         comparisons[f"{second}-{first}"]={"delta_f1":evidence[second]["micro"]["f1"]-evidence[first]["micro"]["f1"], "paired_image_ci95":paired_interval(test,predictions[first],predictions[second]), "paired_session_ci95":paired_interval(test,predictions[first],predictions[second],by_session=True)}
     write_json("report/evidence/paired_comparisons.json",comparisons)
     comparison_lines=[]
@@ -176,7 +197,7 @@ def build_report():
     output_samples=list(predictions["e0"].items())[:5]
     write_json("report/evidence/e0_raw_samples.json",[{"image_id":k,"raw":v} for k,v in output_samples])
     hacks={}
-    for name in (baseline,"e5"):
+    for name in ([baseline,'e5'] if has_bonus else [baseline]):
         parsed=[parse_output(predictions[name][e["image_id"]]) for e in test]
         hacks[name]={"empty_rate":sum(p==[] for p in parsed)/len(test), "invalid_rate":sum(p is None for p in parsed)/len(test), "giant_box_rate":sum(any((b['bbox'][2]-b['bbox'][0])*(b['bbox'][3]-b['bbox'][1])>=500000 for b in (p or [])) for p in parsed)/len(test), "mean_iou_reward":statistics.mean(iou_reward(predictions[name][e["image_id"]],_gt_boxes(e)) for e in test)}
     write_json("report/evidence/reward_hacking.json",hacks)
@@ -192,6 +213,11 @@ def build_report():
     breakdown={name:error_breakdown(test,predictions[name]) for name in ('e0',baseline)}
     write_json('report/evidence/error_breakdown.json',breakdown)
     top_errors=sorted(breakdown['e0']['counts'].items(),key=lambda item:item[1],reverse=True)[:2]
+    bonus_section='Hàm reward IoU và các test đã hoàn tất. Chưa có kết quả GRPO E5 trong bản báo cáo này; không coi đây là bằng chứng đã chạy bonus.'
+    if has_bonus:
+        bonus_section=f'''Khởi tạo từ checkpoint SFT chọn bằng validation, dùng reward IoU cùng lớp, ghép tham lam với IoU≥0,5, phạt box thừa qua mẫu số. Các test gồm hoàn hảo, JSON hỏng, sai lớp, box thừa, rỗng và box lớn. GRPO dùng 4 generations, tối đa 128 token, beta=0, LR=5e-6, 60 bước, use_vllm=False. Log thật ở `report/logs/e5/grpo.log.json`. {comparison_lines[4]}
+
+Kiểm tra reward hacking trên output test thật: {json.dumps(hacks,ensure_ascii=False)}. Tỷ lệ trả [] và box có diện tích tương đương ít nhất 50% khung hình được đối chiếu với SFT; không kết luận chỉ từ reward tăng vì model có thể tận dụng thành phần thưởng JSON hợp lệ. Max completion 128 còn có thể cắt đầu ra có nhiều đối tượng; tỷ lệ parse hợp lệ và FP/FN giúp phát hiện giới hạn đó.'''
     report=f'''Họ tên: {student['name']}
 GitHub: {student['github_username']}; Kaggle: {student['kaggle_username']}
 `dataset_version`: {meta['dataset_version']}
@@ -262,9 +288,7 @@ Chỉ đổi lượng dữ liệu: 10% và 100% train. Giữ setup {baseline.upp
 
 ## Bonus E5 — GRPO
 
-Khởi tạo từ checkpoint SFT chọn bằng validation, dùng reward IoU cùng lớp, ghép tham lam với IoU≥0,5, phạt box thừa qua mẫu số. Các test gồm hoàn hảo, JSON hỏng, sai lớp, box thừa, rỗng và box lớn. GRPO dùng 4 generations, tối đa 128 token, beta=0, LR=5e-6, 60 bước, use_vllm=False. Log thật ở `report/logs/e5/grpo.log.json`. {comparison_lines[4]}
-
-Kiểm tra reward hacking trên output test thật: {json.dumps(hacks,ensure_ascii=False)}. Tỷ lệ trả [] và box có diện tích tương đương ít nhất 50% khung hình được đối chiếu với SFT; không kết luận chỉ từ reward tăng vì model có thể tận dụng thành phần thưởng JSON hợp lệ. Max completion 128 còn có thể cắt đầu ra có nhiều đối tượng; tỷ lệ parse hợp lệ và FP/FN giúp phát hiện giới hạn đó.
+{bonus_section}
 
 ## Nhìn lại
 

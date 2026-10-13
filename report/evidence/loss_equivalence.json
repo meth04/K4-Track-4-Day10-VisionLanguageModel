@@ -1,0 +1,7 @@
+{
+  "reference_loss": 1.1804591417312622,
+  "optimized_loss": 1.1804591417312622,
+  "absolute_difference": 0.0,
+  "tolerance": 0.002,
+  "passed": true
+}
