@@ -13,6 +13,30 @@ def is_projector(name):
     return "visual.merger." in name or "visual.deepstack_merger_list." in name
 
 
+def set_cache(model, enabled):
+    text_config = getattr(model.config, "text_config", model.config)
+    previous = getattr(text_config, "use_cache", True)
+    text_config.use_cache = enabled
+    model.config.use_cache = enabled
+    return previous
+
+
+def persist_base_snapshot(model):
+    """Copy the original base checkpoint inside Kaggle, never to the PC."""
+    from huggingface_hub import snapshot_download
+    import shutil
+    destination = Path("/kaggle/working/base_model")
+    if (destination / "revision.txt").exists():
+        return
+    mounted = sorted(Path("/kaggle/input").rglob("base_model/revision.txt"))
+    if mounted:
+        source = mounted[0].parent
+    else:
+        source = snapshot_download(MODEL_ID, revision=model.config.lab_model_revision, local_files_only=True)
+    shutil.copytree(source, destination, symlinks=False, dirs_exist_ok=True)
+    (destination / "revision.txt").write_text(model.config.lab_model_revision, encoding="utf-8")
+
+
 def load_base():
     import torch
     from huggingface_hub import HfApi
@@ -60,7 +84,7 @@ def apply_setup(model, setup, rank=16):
         if parameter.requires_grad and parameter.dtype != torch.float32:
             parameter.data = parameter.data.to(torch.float32)
     model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
-    model.config.use_cache = False
+    set_cache(model, False)
     info = {"setup": setup, "rank": rank, "matched_module_count": len(matched), "matched_modules": matched, "trainable_params": sum(p.numel() for p in model.parameters() if p.requires_grad), "projector_trainable_params": sum(p.numel() for n,p in model.named_parameters() if is_projector(n) and p.requires_grad), "trainable_groups": {}}
     for name, parameter in model.named_parameters():
         if parameter.requires_grad:

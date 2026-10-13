@@ -10,7 +10,7 @@ from scripts.labcommon import read_jsonl
 from scripts.prepare_data import _find_root, prepare
 from scripts.score import _gt_boxes, main as official_score
 from solution.engine import diagnose, generate, release_memory, seed_everything, train_sft, write_json
-from solution.modeling import apply_setup, load_base, restore_checkpoint, save_checkpoint
+from solution.modeling import apply_setup, load_base, persist_base_snapshot, restore_checkpoint, save_checkpoint, set_cache
 from solution.data import SupervisedDataset, prompt
 
 
@@ -94,7 +94,7 @@ def grpo_phase(steps=60):
     model, original = restore_checkpoint(base, locate_artifact(setup, "best"), trainable=True)
     # Preserve the same trainable architecture as the chosen SFT model.
     model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
-    model.config.use_cache = False
+    set_cache(model, False)
     directory = Path("artifacts/e5")
     directory.mkdir(parents=True, exist_ok=True)
     rows = []
@@ -152,6 +152,7 @@ def main():
     write_json("report/evidence/dataset_summary.json", meta)
     if args.phase == "smoke":
         base, processor = load_base()
+        persist_base_snapshot(base)
         train = read_jsonl("data/splits/train.jsonl")[:8]
         val = read_jsonl("data/splits/val.jsonl")[:4]
         model, info = apply_setup(base, "e3")
@@ -166,12 +167,7 @@ def main():
         model, processor = load_base()
         # Persist the original HF snapshot on Kaggle only. Later kernels attach
         # E0 output and load directly, avoiding repeated GPU-time downloads.
-        from huggingface_hub import snapshot_download
-        import shutil
-        snapshot = snapshot_download("Qwen/Qwen3-VL-4B-Instruct", revision=model.config.lab_model_revision, local_files_only=True)
-        destination = Path("/kaggle/working/base_model")
-        shutil.copytree(snapshot, destination, symlinks=False, dirs_exist_ok=True)
-        (destination / "revision.txt").write_text(model.config.lab_model_revision, encoding="utf-8")
+        persist_base_snapshot(model)
         dataset = SupervisedDataset(read_jsonl("data/splits/train.jsonl")[:1], processor)
         diagnose(dataset, processor, model.config, "report/evidence/supervision.json")
         test = read_jsonl("data/splits/test.jsonl")

@@ -10,7 +10,7 @@ from PIL import Image
 from scripts.labcommon import read_jsonl
 from scripts.score import evaluate
 from solution.data import SupervisedDataset, answer, collate, user_message
-from solution.modeling import save_checkpoint
+from solution.modeling import save_checkpoint, set_cache
 
 
 def write_json(path, value):
@@ -59,8 +59,7 @@ def generate(model, processor, entries, output, coord="norm1000", batch_size=4, 
         raise ValueError("Duplicate predictions in existing file.")
     pending = [e for e in entries if e["image_id"] not in done]
     model.eval()
-    was_cache = model.config.use_cache
-    model.config.use_cache = True
+    was_cache = set_cache(model, True)
     processor.tokenizer.padding_side = "left"
     start = time.perf_counter()
     with output.open("a" if resume else "w", encoding="utf-8") as stream:
@@ -90,7 +89,7 @@ def generate(model, processor, entries, output, coord="norm1000", batch_size=4, 
                     raise
                 batch_size = max(1, batch_size//2)
                 print(f"Reducing inference batch size to {batch_size}", flush=True)
-    model.config.use_cache = was_cache
+    set_cache(model, was_cache)
     preds = {r["image_id"]:r["raw"] for r in read_jsonl(output)}
     if set(preds) != {e["image_id"] for e in entries}:
         raise ValueError("Prediction coverage differs from split.")
@@ -119,7 +118,7 @@ def train_sft(model, processor, entries, val_entries, directory, info, steps=300
     optimizer.zero_grad(set_to_none=True)
     for step in range(1, steps+1):
         model.train()
-        model.config.use_cache = False
+        set_cache(model, False)
         torch.cuda.synchronize()
         started = time.perf_counter()
         step_loss = 0.0
