@@ -13,6 +13,24 @@ from solution.reporting import locate
 from tools.check_rubric import audit
 
 
+def measure_e0_resources():
+    """Measure a labelled validation probe without repeating E0 test inference."""
+    import torch
+    from scripts.labcommon import read_jsonl
+    from scripts.prepare_data import _find_root, prepare
+    from solution.engine import generate, release_memory
+    from solution.modeling import load_base
+    meta=prepare(_find_root('/kaggle/input'),ROOT/'data')
+    entries=read_jsonl(ROOT/'data/splits/val.jsonl')[:4]
+    model,processor=load_base()
+    torch.cuda.reset_peak_memory_stats()
+    _,seconds=generate(model,processor,entries,ROOT/'work/e0_resource_val.jsonl')
+    measured={'dataset_version':meta['dataset_version'],'split':'val','n_images':len(entries),'image_ids':[e['image_id'] for e in entries],'batch_size':4,'max_new_tokens':512,'peak_vram_gb':torch.cuda.max_memory_allocated()/2**30,'inference_minutes':seconds/60,'scope':'Four validation images; E0 test predictions are reused without new test inference.'}
+    write_json(ROOT/'report/evidence/e0_resource_probe.json',measured)
+    del model,processor
+    release_memory()
+
+
 def main():
     if not Path('/kaggle/input').is_dir():
         raise SystemExit('This full workflow only runs on Kaggle.')
@@ -25,6 +43,7 @@ def main():
             shutil.copy2(source,destination)
     evidence=json.loads((ROOT/'report/evidence/e0.json').read_text(encoding='utf-8'))
     assert evidence['missing_predictions']==0 and evidence['split']=='test'
+    measure_e0_resources()
     completed=['e0']
     phases=['e1','e2','e3','e4','e5','report']
     try:

@@ -142,7 +142,11 @@ def build_report():
     for name,value in evidence.items():
         info=value["meta"]
         lo,hi=value["f1_ci95"]
-        rows.append(f"| {name.upper()} | {setups[name]} | {info.get('trainable_params',0):,.0f} | {info.get('peak_vram_gb',0):.2f} | {info.get('train_minutes',0):.2f} | {fmt(value['micro']['f1'])} | [{fmt(lo)}, {fmt(hi)}] | {fmt(value['fp_per_image'])} | " + " | ".join(fmt(value["per_class"][c]["f1"]) for c in CLASSES)+" |")
+        memory=f"{info['peak_vram_gb']:.2f}" if 'peak_vram_gb' in info else 'không đo'
+        if name=='e0' and Path('report/evidence/e0_resource_probe.json').exists():
+            resource=json.loads(Path('report/evidence/e0_resource_probe.json').read_text(encoding='utf-8'))
+            memory=f"{resource['peak_vram_gb']:.2f}†"
+        rows.append(f"| {name.upper()} | {setups[name]} | {info.get('trainable_params',0):,.0f} | {memory} | {info.get('train_minutes',0):.2f} | {info.get('test_inference_minutes',0):.2f} | {fmt(value['micro']['f1'])} | [{fmt(lo)}, {fmt(hi)}] | {fmt(value['fp_per_image'])} | " + " | ".join(fmt(value["per_class"][c]["f1"]) for c in CLASSES)+" |")
         if name != "e0":
             for filename in ("run.json","train.log.json","grpo.log.json","diagnostics.json","validation.json"):
                 try: source=locate(f"artifacts/{name}/{filename}")
@@ -198,9 +202,11 @@ Chạy trên Kaggle, GPU {preflight['gpu']} ({preflight['gpu_memory_gb']:.2f} Gi
 
 ## Bảng tổng hợp
 
-| Mã | Setup | Tham số huấn luyện | VRAM đỉnh GiB | Phút huấn luyện | F1 | CI95 | FP/ảnh | F1 pothole | F1 crack | F1 manhole |
-|---|---|---|---|---|---|---|---|---|---|---|
+| Mã | Setup | Tham số huấn luyện | VRAM đỉnh GiB | Phút huấn luyện | Phút suy luận test | F1 | CI95 | FP/ảnh | F1 pothole | F1 crack | F1 manhole |
+|---|---|---|---|---|---|---|---|---|---|---|---|
 {chr(10).join(rows)}
+
+† E0 không huấn luyện; VRAM được đo riêng trên bốn ảnh validation với batch=4 và max_new_tokens=512. Đây là đỉnh cấp phát của lượt đo này, không khẳng định là đỉnh của toàn bộ test. Số đo thật và image_id trong `e0_resource_probe.json`. Thời gian suy luận test của E0 lấy từ lượt test gốc; không chạy lại suy luận test.
 
 ## Câu 1 — Kiến trúc
 
