@@ -38,6 +38,10 @@ def remote_phase(owner,phase,sources,state):
     prior=state["phases"].get(phase)
     if prior and prior["status"]=="complete":
         return
+    if prior and prior["status"]=="failed":
+        current=cli("kernels","status",ref)
+        if any(word in current for word in ("ERROR","CANCEL","FAILED")):
+            raise RuntimeError(f"{phase} still failed. Push the repaired phase manually before resuming.")
     if not prior:
         directory,_=build(owner,phase,sources)
         command=["kernels","push","-p",str(directory)]

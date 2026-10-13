@@ -20,7 +20,9 @@ def load_base():
     if not torch.cuda.is_available():
         raise RuntimeError("Training/inference requires the Kaggle GPU. Never run on the local machine.")
     revision = HfApi().model_info(MODEL_ID).sha
-    quantization = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True, llm_int8_skip_modules=["visual", "lm_head"])
+    # Transformers 5.19 matches prefixes against fully qualified names; "visual"
+    # alone no longer excludes model.visual.blocks.*. Include the full prefix.
+    quantization = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True, llm_int8_skip_modules=["model.visual", "visual", "lm_head"])
     model = Qwen3VLForConditionalGeneration.from_pretrained(MODEL_ID, revision=revision, quantization_config=quantization, dtype=torch.float16, device_map={"": 0}, attn_implementation="sdpa")
     model.config.lab_model_revision = revision
     processor = AutoProcessor.from_pretrained(MODEL_ID, revision=revision)
