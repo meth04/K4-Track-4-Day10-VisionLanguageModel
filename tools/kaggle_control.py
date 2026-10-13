@@ -33,6 +33,7 @@ root = pathlib.Path("/kaggle/working/lab")
 root.mkdir(parents=True, exist_ok=True)
 zipfile.ZipFile(io.BytesIO(base64.b64decode({payload!r}))).extractall(root)
 os.chdir(root)
+subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "torchao"], check=True)
 subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements-colab.txt", "pytest", "datasets"], check=True)
 try:
     subprocess.run([sys.executable, "-u", "tools/kaggle_preflight.py"] if {phase!r} == "preflight" else [sys.executable, "-u", "-m", "solution.run", "--phase", {phase!r}, *{list(options)!r}], check=True)
