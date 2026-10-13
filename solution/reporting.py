@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 import yaml
 
 from scripts.labcommon import CLASSES, read_jsonl
-from scripts.score import _gt_boxes, _match, _prf, evaluate, parse_output
+from scripts.score import _gt_boxes, _match, _prf, evaluate, iou_xyxy, parse_output
 from solution.engine import write_json
 from solution.reward import iou_reward
 
@@ -90,6 +90,34 @@ def fmt(value):
     return f"{value:.4f}"
 
 
+def error_breakdown(entries, predictions):
+    counts={"JSON hỏng":0,"bỏ sót GT":0,"box trùng":0,"sai lớp với IoU ≥ 0.5":0,"sai định vị, IoU cùng lớp 0.1–0.5":0,"FP có IoU cùng lớp < 0.1":0}
+    areas={c:{"matched":[],"missed":[]} for c in CLASSES}
+    for entry in entries:
+        parsed=parse_output(predictions[entry["image_id"]])
+        if parsed is None: counts["JSON hỏng"]+=1
+        pred=parsed or []
+        gt=_gt_boxes(entry)
+        pairs=sorted(((iou_xyxy(g['bbox'],p['bbox']),i,j) for i,g in enumerate(gt) for j,p in enumerate(pred) if g['label']==p['label']),reverse=True)
+        used_g,used_p=set(),set()
+        for overlap,i,j in pairs:
+            if overlap<.5: break
+            if i not in used_g and j not in used_p:
+                used_g.add(i); used_p.add(j)
+        counts['bỏ sót GT']+=len(gt)-len(used_g)
+        for i,g in enumerate(gt):
+            bb=g['bbox']
+            areas[g['label']]['matched' if i in used_g else 'missed'].append((bb[2]-bb[0])*(bb[3]-bb[1])/10000)
+        for j,p in enumerate(pred):
+            if j in used_p: continue
+            same=max((iou_xyxy(g['bbox'],p['bbox']) for g in gt if g['label']==p['label']),default=0)
+            other=max((iou_xyxy(g['bbox'],p['bbox']) for g in gt if g['label']!=p['label']),default=0)
+            category='box trùng' if same>=.5 else ('sai lớp với IoU ≥ 0.5' if other>=.5 else ('sai định vị, IoU cùng lớp 0.1–0.5' if same>=.1 else 'FP có IoU cùng lớp < 0.1'))
+            counts[category]+=1
+    medians={c:{kind:statistics.median(values) if values else None for kind,values in groups.items()} for c,groups in areas.items()}
+    return {"counts":counts,"median_area_percent_by_match":medians,"note":"FN and FP categories can describe the same wrong prediction; counts are not disjoint events."}
+
+
 def build_report():
     required=("e0","e1","e2","e3","e4_data_size_0.1","e4_data_size_1.0","e5")
     evidence={}
@@ -157,6 +185,9 @@ def build_report():
     arch=preflight["architecture"]
     gain=evidence["e1"]["micro"]["f1"]-evidence["e0"]["micro"]["f1"]
     e0stats=evidence["e0"]["micro"]
+    breakdown={name:error_breakdown(test,predictions[name]) for name in ('e0',baseline)}
+    write_json('report/evidence/error_breakdown.json',breakdown)
+    top_errors=sorted(breakdown['e0']['counts'].items(),key=lambda item:item[1],reverse=True)[:2]
     report=f'''Họ tên: {student['name']}
 GitHub: {student['github_username']}; Kaggle: {student['kaggle_username']}
 `dataset_version`: {meta['dataset_version']}
@@ -173,11 +204,11 @@ Chạy trên Kaggle, GPU {preflight['gpu']} ({preflight['gpu_memory_gb']:.2f} Gi
 
 ## Câu 1 — Kiến trúc
 
-Đếm từ model thật trên meta device: tổng {arch['total']:,} tham số; language_model {arch['language_model']:,}; visual {arch['visual']:,}, trong đó merger {arch['visual.merger']:,} và deepstack_merger_list {arch['visual.deepstack_merger_list']:,}. Projector nằm trong visual, không cộng lại lần thứ hai. ViT tạo đặc trưng ảnh, projector đưa đặc trưng sang không gian biểu diễn của LLM, LLM sinh JSON. E1 cập nhật adapter của 252 module LLM. E2 thêm toàn bộ projector. E3 thêm 96 module ViT, tổng 348 module LoRA. Các tham số nền khác đóng băng. Số tham số thực sự huấn luyện được ghi trong bảng và nhật ký.
+Đếm từ model thật trên meta device: tổng {arch['total']:,} tham số; language_model {arch['language_model']:,}; visual {arch['visual']:,}, trong đó merger {arch['visual.merger']:,} và deepstack_merger_list {arch['visual.deepstack_merger_list']:,}. Tổng projector là {arch['visual.merger']+arch['visual.deepstack_merger_list']:,}; phần visual ngoài projector là {arch['visual']-arch['visual.merger']-arch['visual.deepstack_merger_list']:,}. Projector nằm trong visual, không cộng lại lần thứ hai. ViT tạo đặc trưng ảnh, projector đưa đặc trưng sang không gian biểu diễn của LLM, LLM sinh JSON. E1 cập nhật adapter của 252 module LLM. E2 thêm toàn bộ projector. E3 thêm 96 module ViT, tổng 348 module LoRA. Các tham số nền khác đóng băng. Số tham số thực sự huấn luyện được ghi trong bảng và nhật ký.
 
 ## Câu 2 — E0
 
-Tỷ lệ parse hợp lệ: {evidence['e0']['parse_valid_rate']:.4f}. Tổng TP={e0stats['tp']}, FP={e0stats['fp']}, FN={e0stats['fn']}: model bỏ sót đối tượng và sinh box không khớp nhãn/IoU là các nhóm lỗi cần kiểm tra trực quan. Tỷ lệ JSON hỏng là {1-evidence['e0']['parse_valid_rate']:.4f}; không mặc định quy lỗi JSON khi parser vẫn chấp nhận đầu ra. Năm output thô thật nằm trong `report/evidence/e0_raw_samples.json`. Ví dụ ảnh `{output_samples[0][0]}`:
+Tỷ lệ parse hợp lệ: {evidence['e0']['parse_valid_rate']:.4f}. Tổng TP={e0stats['tp']}, FP={e0stats['fp']}, FN={e0stats['fn']}. Hai nhóm lỗi đếm được nhiều nhất là {top_errors[0][0]} ({top_errors[0][1]}) và {top_errors[1][0]} ({top_errors[1][1]}). Phân loại FP dựa trên IoU với GT cùng/khác lớp; FN và FP có thể mô tả cùng một dự đoán sai, không xem là các sự kiện độc lập. Tỷ lệ JSON hỏng là {1-evidence['e0']['parse_valid_rate']:.4f}; không mặc định quy lỗi JSON khi parser vẫn chấp nhận đầu ra. Năm output thô thật nằm trong `report/evidence/e0_raw_samples.json`. Ví dụ ảnh `{output_samples[0][0]}`:
 
 ```text
 {output_samples[0][1]}
@@ -215,7 +246,7 @@ Test có {len(test)} ảnh thuộc {len({e['session'] for e in test})} phiên. C
 
 ## Câu 9 — Phân tích theo lớp
 
-Lớp có F1 thấp nhất của {baseline.upper()} là `{weakest}`: {evidence[baseline]['per_class'][weakest]['f1']:.4f}, TP={evidence[baseline]['per_class'][weakest]['tp']}, FP={evidence[baseline]['per_class'][weakest]['fp']}, FN={evidence[baseline]['per_class'][weakest]['fn']}. Trung vị diện tích box theo phần trăm ảnh trên train: {json.dumps(medians)}. Box nhỏ nhạy với sai lệch tọa độ, lượng mẫu giữa lớp không đều, và bề mặt đường có thể gây nhầm ngữ nghĩa; đây là các khả năng giải thích, chưa phải quan hệ nhân quả được chứng minh. Sáu ảnh dưới chọn trường hợp ít/nhiều lỗi cho từng lớp, có GT xanh và dự đoán đỏ.
+Lớp có F1 thấp nhất của {baseline.upper()} là `{weakest}`: {evidence[baseline]['per_class'][weakest]['f1']:.4f}, TP={evidence[baseline]['per_class'][weakest]['tp']}, FP={evidence[baseline]['per_class'][weakest]['fp']}, FN={evidence[baseline]['per_class'][weakest]['fn']}. Trung vị diện tích box theo phần trăm ảnh trên train: {json.dumps(medians)}. Với lớp này trên test, trung vị diện tích GT được khớp/bị bỏ sót là {json.dumps(breakdown[baseline]['median_area_percent_by_match'][weakest])}. Box nhỏ nhạy với sai lệch tọa độ, lượng mẫu giữa lớp không đều, và bề mặt đường có thể gây nhầm ngữ nghĩa; đây là các khả năng giải thích, chưa phải quan hệ nhân quả được chứng minh. Sáu ảnh dưới chọn trường hợp ít/nhiều lỗi cho từng lớp, có GT xanh và dự đoán đỏ.
 
 {images}
 

@@ -31,3 +31,18 @@ def test_round_trip_coordinate_scales():
 
 def test_duplicate_prediction_cannot_reuse_ground_truth():
     assert iou_reward(json.dumps([BOX]*10), GT) == pytest.approx(.28)
+
+
+def test_report_error_counts_agree_with_official_scorer():
+    from scripts.score import evaluate
+    from solution.reporting import error_breakdown
+    entries=[
+        {"image_id":"a","width":640,"height":360,"objects":[{"label":"pothole","yolo":[.2,.2,.2,.2]},{"label":"crack","yolo":[.5,.5,.2,.2]}]},
+        {"image_id":"b","width":640,"height":360,"objects":[{"label":"pothole","yolo":[.2,.2,.2,.2]}]},
+    ]
+    predictions={"a":json.dumps([BOX,BOX,{"label":"manhole","bbox_2d":[400,400,600,600]}]),"b":"broken JSON"}
+    counts=error_breakdown(entries,predictions)['counts']
+    official=evaluate(entries,predictions,n_boot=40)['micro']
+    assert counts['bỏ sót GT']==official['fn']==2
+    assert sum(counts[k] for k in ('box trùng','sai lớp với IoU ≥ 0.5','sai định vị, IoU cùng lớp 0.1–0.5','FP có IoU cùng lớp < 0.1'))==official['fp']==2
+    assert counts['box trùng']==counts['sai lớp với IoU ≥ 0.5']==counts['JSON hỏng']==1
