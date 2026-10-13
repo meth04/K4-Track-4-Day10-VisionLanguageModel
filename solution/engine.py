@@ -110,8 +110,8 @@ def train_sft(model, processor, entries, val_entries, directory, info, steps=300
     parameters = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.AdamW(parameters, lr=lr, weight_decay=0)
     warmup = max(1, math.ceil(.05*steps))
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda step: step/warmup if step < warmup else .5*(1+math.cos(math.pi*(step-warmup)/max(1,steps-warmup))))
-    scaler = torch.amp.GradScaler("cuda")
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda step: (step+1)/warmup if step < warmup else .5*(1+math.cos(math.pi*(step-warmup)/max(1,steps-warmup))))
+    scaler = torch.amp.GradScaler("cuda", init_scale=256)
     torch.cuda.reset_peak_memory_stats()
     elapsed = 0.0
     best_f1 = -1.0

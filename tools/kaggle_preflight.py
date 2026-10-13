@@ -23,6 +23,7 @@ def main():
     processor = AutoProcessor.from_pretrained(model_id)
     with init_empty_weights():
         model = Qwen3VLForConditionalGeneration(config)
+    model.tie_weights()
     names = [name for name, _ in model.named_modules()]
     architecture = {"total": sum(p.numel() for p in model.parameters())}
     for name in ("visual", "visual.merger", "visual.deepstack_merger_list", "language_model"):

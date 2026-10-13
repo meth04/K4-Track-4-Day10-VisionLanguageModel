@@ -15,13 +15,14 @@ def is_projector(name):
 
 def load_base():
     import torch
-    from transformers import AutoConfig, AutoProcessor, BitsAndBytesConfig, Qwen3VLForConditionalGeneration
+    from huggingface_hub import HfApi
+    from transformers import AutoProcessor, BitsAndBytesConfig, Qwen3VLForConditionalGeneration
     if not torch.cuda.is_available():
         raise RuntimeError("Training/inference requires the Kaggle GPU. Never run on the local machine.")
-    config = AutoConfig.from_pretrained(MODEL_ID)
-    revision = config._commit_hash
+    revision = HfApi().model_info(MODEL_ID).sha
     quantization = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True, llm_int8_skip_modules=["visual", "lm_head"])
     model = Qwen3VLForConditionalGeneration.from_pretrained(MODEL_ID, revision=revision, quantization_config=quantization, dtype=torch.float16, device_map={"": 0}, attn_implementation="sdpa")
+    model.config.lab_model_revision = revision
     processor = AutoProcessor.from_pretrained(MODEL_ID, revision=revision)
     processor.tokenizer.padding_side = "left"
     for name, module in model.named_modules():
