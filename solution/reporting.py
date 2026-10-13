@@ -198,7 +198,7 @@ GitHub: {student['github_username']}; Kaggle: {student['kaggle_username']}
 
 ## Môi trường và cách tái lập
 
-Chạy trên Kaggle, GPU {preflight['gpu']} ({preflight['gpu_memory_gb']:.2f} GiB), chỉ một GPU được nhìn thấy qua CUDA_VISIBLE_DEVICES=0. Đề gốc dùng Colab T4; đây là thay đổi nền tảng và được ghi rõ. Không chạy model trên máy cá nhân. Phiên bản thư viện thực tế nằm trong `report/evidence/preflight.json`. Mã của bài ở `solution/`; `scripts/` và `tests/` giữ nguyên. SFT dùng batch=1, tích lũy=8, 300 bước, LR=2e-4, seed=42; đây là phương án giảm VRAM được GUIDE cho phép. Checkpoint chọn theo 40 ảnh validation cố định; báo cáo thêm kết quả trên toàn bộ validation. Mỗi setup suy luận test một lần. Thời gian huấn luyện đo riêng các bước tối ưu, không gồm validation; tổng thời gian chạy sẽ lớn hơn.
+Chạy trên Kaggle, GPU {preflight['gpu']} ({preflight['gpu_memory_gb']:.2f} GiB), chỉ một GPU được nhìn thấy qua CUDA_VISIBLE_DEVICES=0. Đề gốc dùng Colab T4; đây là thay đổi nền tảng và được ghi rõ. Không chạy model trên máy cá nhân. Phiên bản thư viện thực tế nằm trong `report/evidence/preflight.json`. Mã của bài ở `solution/`; `scripts/` và `tests/` giữ nguyên. SFT dùng batch=2, tích lũy=4, 300 bước, LR=2e-4, seed=42. Để tiết kiệm VRAM và thời gian, LM head chỉ tính logits ở vị trí có next-token label khác -100; cross entropy và mask giữ nguyên, được đối chiếu với loss đầy đủ trong thử GPU. Checkpoint chọn theo 40 ảnh validation cố định; báo cáo thêm kết quả trên toàn bộ validation. Mỗi setup suy luận test một lần. Thời gian huấn luyện đo riêng các bước tối ưu, không gồm validation; tổng thời gian chạy sẽ lớn hơn.
 
 ## Bảng tổng hợp
 
@@ -222,7 +222,7 @@ Tỷ lệ parse hợp lệ: {evidence['e0']['parse_valid_rate']:.4f}. Tổng TP=
 
 ## Câu 3 — Thang tọa độ
 
-Nhãn YOLO (xc,yc,w,h) chuyển thành (xc−w/2,yc−h/2,xc+w/2,yc+h/2), nhân 1000, làm tròn và kẹp. Quy ngược về pixel bằng x·640/1000 và y·360/1000. Unit test kiểm tra [375,250,625,750] tương ứng [240,90,400,270]. Với output thật của {baseline.upper()}, chấm đúng thang cho F1={fmt(evidence[baseline]['micro']['f1'])}; diễn giải nhầm là pixel cho F1={fmt(wrong['micro']['f1'])}. Đây là chấm lại cùng output, không chạy lại suy luận. Hai hệ số trục khác nhau khiến box sai vị trí/kích thước và IoU giảm; số liệu nằm trong `wrong_coordinate_scale.json`.
+Nhãn YOLO (xc,yc,w,h) chuyển thành (xc−w/2,yc−h/2,xc+w/2,yc+h/2), nhân 1000, làm tròn và kẹp. Với box quá mỏng bị làm tròn thành chiều rộng/cao 0, chỉ trục đó được floor/ceil ra ngoài và giữ kích thước tối thiểu một đơn vị; không bỏ nhãn, đổi split hay sửa GT của bộ chấm. Đây là giới hạn lượng tử hóa tọa độ, có thể khiến IoU thấp với box cực nhỏ. Quy ngược về pixel bằng x·640/1000 và y·360/1000. Unit test kiểm tra [375,250,625,750] tương ứng [240,90,400,270]. Với output thật của {baseline.upper()}, chấm đúng thang cho F1={fmt(evidence[baseline]['micro']['f1'])}; diễn giải nhầm là pixel cho F1={fmt(wrong['micro']['f1'])}. Đây là chấm lại cùng output, không chạy lại suy luận. Hai hệ số trục khác nhau khiến box sai vị trí/kích thước và IoU giảm; số liệu nằm trong `wrong_coordinate_scale.json`.
 
 ## Câu 4 — Mask loss
 

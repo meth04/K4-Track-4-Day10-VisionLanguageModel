@@ -4,7 +4,7 @@ Nguyễn Văn Thân — GitHub `meth04`, Kaggle `soobinms`.
 
 Kaggle CLI đã cài cho Python của người dùng. Dùng `python -m kaggle` kể cả khi terminal hiện tại chưa cập nhật PATH. Lệnh `kaggle` có sẵn trong terminal mở mới. Đăng nhập OAuth lưu ngoài repo, không cần đặt khóa trong notebook hoặc `.env`.
 
-Huấn luyện, suy luận, dữ liệu và trọng số nằm trên Kaggle. Máy cá nhân chỉ sửa mã, đóng gói source, gửi lệnh và nhận báo cáo nhỏ. Một T4 được dùng dù Kaggle cấp T4 x2; batch=1, grad_accum=8 là phương án được GUIDE cho phép. Nền tảng Kaggle khác yêu cầu Colab của đề; báo cáo ghi rõ thay đổi này.
+Huấn luyện, suy luận, dữ liệu và trọng số nằm trên Kaggle. Máy cá nhân chỉ sửa mã, đóng gói source, gửi lệnh và nhận báo cáo nhỏ. Một T4 được dùng dù Kaggle cấp T4 x2; batch=2, grad_accum=4 đúng config của đề. Loss chỉ tạo logits cho token được giám sát, giữ nguyên causal cross entropy và kiểm tra tương đương trên GPU. Box dưới độ phân giải tọa độ được mở tối thiểu một đơn vị, giữ nhãn và GT gốc. Nền tảng Kaggle khác yêu cầu Colab của đề; báo cáo ghi rõ thay đổi này.
 
 ## Chạy tự động
 

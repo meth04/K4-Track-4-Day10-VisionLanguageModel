@@ -36,6 +36,31 @@ def release_memory():
     torch.cuda.empty_cache()
 
 
+def response_loss(model, batch):
+    """Exact causal response loss with no vocabulary projection of masked tokens."""
+    import torch
+    labels=batch['labels']
+    positions=(labels[:,1:]!=-100).any(dim=0).nonzero(as_tuple=False).flatten()
+    if positions.numel()==0:
+        raise ValueError('Training example has no supervised next tokens.')
+    inputs={k:v for k,v in batch.items() if k!='labels'}
+    logits=model(**inputs, logits_to_keep=positions).logits
+    targets=labels[:,1:].index_select(1,positions)
+    return torch.nn.functional.cross_entropy(logits.float().reshape(-1,logits.shape[-1]),targets.reshape(-1),ignore_index=-100)
+
+
+def verify_response_loss(model, batch, output):
+    import torch
+    model.eval()
+    with torch.inference_mode(),torch.autocast('cuda',dtype=torch.float16):
+        reference=float(model(**batch).loss)
+        optimized=float(response_loss(model,batch))
+    difference=abs(reference-optimized)
+    write_json(output,{'reference_loss':reference,'optimized_loss':optimized,'absolute_difference':difference,'tolerance':.002,'passed':difference<.002})
+    if difference>=.002:
+        raise ValueError(f'Optimized response loss differs from full loss: {difference}')
+
+
 def diagnose(dataset, processor, config, output):
     first = dataset[0]
     ids, labels = first["input_ids"][0], first["labels"][0]
@@ -130,7 +155,7 @@ def train_sft(model, processor, entries, val_entries, directory, info, steps=300
                 batch = next(iterator)
             batch = {k:v.to("cuda") for k,v in batch.items()}
             with torch.autocast("cuda", dtype=torch.float16):
-                loss = model(**batch).loss / grad_accum
+                loss = response_loss(model,batch) / grad_accum
             if not torch.isfinite(loss):
                 raise FloatingPointError(f"Non-finite loss at step {step}; stop and debug on validation.")
             step_loss += float(loss.detach())

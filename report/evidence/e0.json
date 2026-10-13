@@ -1,0 +1,65 @@
+{
+  "n_images": 311,
+  "parse_valid_rate": 0.49517684887459806,
+  "missing_predictions": 0,
+  "micro": {
+    "precision": 0.06299212598425197,
+    "recall": 0.0411663807890223,
+    "f1": 0.049792531120331954,
+    "tp": 24,
+    "fp": 357,
+    "fn": 559
+  },
+  "per_class": {
+    "pothole": {
+      "precision": 0.22580645161290322,
+      "recall": 0.05785123966942149,
+      "f1": 0.09210526315789475,
+      "tp": 7,
+      "fp": 24,
+      "fn": 114
+    },
+    "crack": {
+      "precision": 0.009708737864077669,
+      "recall": 0.006688963210702341,
+      "f1": 0.007920792079207921,
+      "tp": 2,
+      "fp": 204,
+      "fn": 297
+    },
+    "manhole": {
+      "precision": 0.10416666666666667,
+      "recall": 0.09202453987730061,
+      "f1": 0.09771986970684039,
+      "tp": 15,
+      "fp": 129,
+      "fn": 148
+    },
+    "other": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0
+    }
+  },
+  "mean_iou": 0.5846951838536891,
+  "fp_per_image": 1.1479099678456592,
+  "f1_ci95": [
+    0.030467899891186076,
+    0.0728476821192053
+  ],
+  "score_version": 1,
+  "name": "E0",
+  "dataset_version": "d10-21e4070301",
+  "split": "test",
+  "coord": "norm1000",
+  "meta": {
+    "trainable_params": 0,
+    "train_minutes": 0,
+    "test_inference_minutes": 58.051112582816664,
+    "model_revision": "ebb281ec70b05090aa6165b016eac8ec08e71b17",
+    "platform": "Kaggle"
+  }
+}

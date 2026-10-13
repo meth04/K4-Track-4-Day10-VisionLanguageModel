@@ -9,7 +9,7 @@ import sys
 from scripts.labcommon import read_jsonl
 from scripts.prepare_data import _find_root, prepare
 from scripts.score import _gt_boxes, main as official_score
-from solution.engine import diagnose, generate, release_memory, seed_everything, train_sft, write_json
+from solution.engine import diagnose, generate, release_memory, seed_everything, train_sft, verify_response_loss, write_json
 from solution.modeling import apply_setup, load_base, persist_base_snapshot, restore_checkpoint, save_checkpoint, set_cache
 from solution.data import SupervisedDataset, prompt
 
@@ -62,6 +62,9 @@ def sft_phase(setup, name=None, fraction=1.0, steps=300):
     if Path(f"report/evidence/{name}.json").exists():
         raise FileExistsError(f"{name} already has test evidence. Reuse it rather than retraining under the same run name.")
     train = read_jsonl("data/splits/train.jsonl")
+    from solution.data import target_objects
+    for entry in train:
+        target_objects(entry)
     if fraction < 1:
         random.Random(42).shuffle(train)
         train = train[:max(1, round(len(train)*fraction))]
@@ -75,9 +78,10 @@ def sft_phase(setup, name=None, fraction=1.0, steps=300):
     info["train_fraction"] = fraction
     info["ablation_variable"] = "data_size" if fraction < 1 else "none"
     info["development_image_ids"] = [e["image_id"] for e in dev]
-    # The lab explicitly permits this T4 memory fallback; all runs use the same
-    # effective batch of eight images, for comparable optimization.
-    meta = train_sft(model, processor, train, dev, f"artifacts/{name}", info, steps=steps, batch_size=1, grad_accum=8)
+    # Configured batch=2, accumulation=4; project only supervised logits so
+    # masked image/prompt tokens don't allocate large vocabulary tensors.
+    info['loss_implementation']='response logits only; equivalent shifted cross entropy'
+    meta = train_sft(model, processor, train, dev, f"artifacts/{name}", info, steps=steps, batch_size=2, grad_accum=4)
     del model, base, processor
     release_memory()
     evaluate_checkpoint(setup, name, meta)
@@ -154,11 +158,15 @@ def main():
     write_json("report/evidence/dataset_summary.json", meta)
     if args.phase == "smoke":
         base, processor = load_base()
-        persist_base_snapshot(base)
         train = read_jsonl("data/splits/train.jsonl")[:8]
         val = read_jsonl("data/splits/val.jsonl")[:4]
         model, info = apply_setup(base, "e3")
-        train_sft(model, processor, train, val, "artifacts/smoke", info, steps=1, batch_size=1, grad_accum=1)
+        from solution.data import collate
+        dataset=SupervisedDataset(train,processor)
+        batch={k:v.to('cuda') for k,v in collate([dataset[0],dataset[1]],processor.tokenizer.pad_token_id).items()}
+        verify_response_loss(model,batch,'report/evidence/loss_equivalence.json')
+        del batch,dataset
+        train_sft(model, processor, train, val, "artifacts/smoke", info, steps=1, batch_size=2, grad_accum=4)
         del model, base, processor
         release_memory()
         base, processor = load_base()

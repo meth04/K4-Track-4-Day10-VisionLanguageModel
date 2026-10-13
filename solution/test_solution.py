@@ -33,6 +33,16 @@ def test_duplicate_prediction_cannot_reuse_ground_truth():
     assert iou_reward(json.dumps([BOX]*10), GT) == pytest.approx(.28)
 
 
+@pytest.mark.parametrize('coord', ['norm1000','pixel'])
+@pytest.mark.parametrize('center', [.0,.5,1.0])
+def test_subpixel_boxes_remain_valid_at_boundaries(coord,center):
+    entry={'image_id':'thin','width':640,'height':360,'objects':[{'label':'crack','yolo':[center,center,.004,.0001]}]}
+    bb=target_objects(entry,coord)[0]['bbox_2d']
+    sx,sy=(1000,1000) if coord=='norm1000' else (640,360)
+    assert 0<=bb[0]<bb[2]<=sx
+    assert 0<=bb[1]<bb[3]<=sy
+
+
 def test_report_error_counts_agree_with_official_scorer():
     from scripts.score import evaluate
     from solution.reporting import error_breakdown

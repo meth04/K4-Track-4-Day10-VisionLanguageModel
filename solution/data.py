@@ -1,5 +1,6 @@
 """Grounding targets and response-only supervised examples."""
 import json
+import math
 from functools import lru_cache
 from pathlib import Path
 from PIL import Image
@@ -22,8 +23,14 @@ def target_objects(entry, coord="norm1000"):
     for obj in entry["objects"]:
         xc, yc, w, h = obj["yolo"]
         bb = [round(max(0, min(1, value)) * scale) for value, scale in zip((xc-w/2, yc-h/2, xc+w/2, yc+h/2), (sx, sy, sx, sy))]
-        if bb[2] <= bb[0] or bb[3] <= bb[1]:
-            raise ValueError(f"Box collapsed during rounding: {entry['image_id']}: {bb}")
+        # Extremely thin annotations can collapse under nearest-integer rounding.
+        # Expand only a collapsed axis outwards, keeping every annotation and
+        # every coordinate inside the requested scale. The scorer/GT stay intact.
+        raw = [(xc-w/2)*sx, (yc-h/2)*sy, (xc+w/2)*sx, (yc+h/2)*sy]
+        for lower, upper, limit in ((0, 2, sx), (1, 3, sy)):
+            if bb[upper] <= bb[lower]:
+                bb[lower] = max(0, min(limit-1, math.floor(raw[lower])))
+                bb[upper] = max(bb[lower]+1, min(limit, math.ceil(raw[upper])))
         objects.append({"label": obj["label"], "bbox_2d": bb})
     return sorted(objects, key=lambda o: (o["bbox_2d"][1], o["bbox_2d"][0], o["label"]))
 
