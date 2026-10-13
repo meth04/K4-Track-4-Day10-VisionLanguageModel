@@ -9,10 +9,12 @@ Huấn luyện, suy luận, dữ liệu và trọng số nằm trên Kaggle. Má
 ## Chạy tự động
 
 ```powershell
-python tools/run_campaign.py --smoke-already-submitted
+python tools/run_campaign.py --smoke-already-submitted --cloud-workflow
 ```
 
-Bộ điều khiển đợi smoke test thành công, chạy E0/E1 rồi E2/E3 (tối đa hai notebook cùng lúc), chạy E4/E5 từ các output baseline, rồi tạo báo cáo trên CPU Kaggle. Sau khi các kiểm tra rubric đạt, nó commit và đẩy kết quả lên GitHub. Trạng thái lưu ở `work/campaign/state.json`; có thể chạy lại lệnh để tiếp tục các phase đang chạy hoặc đã hoàn tất. Phase lỗi dừng chiến dịch để sửa; không tự sinh hoặc thay thế số liệu.
+Bộ điều khiển đợi smoke test và E0 hoàn tất, rồi gửi notebook `full` lên Kaggle. Notebook này tự chạy E1, E2, E3, E4, E5 và tạo báo cáo trong cùng một phiên; dùng lại model gốc từ output E0. Nếu E1 đã được gửi riêng, bộ điều khiển chờ E1 và gắn output đó vào `full` để tái sử dụng, không chạy test E1 lần nữa. Sau khi `full` đã được gửi, việc huấn luyện không cần máy cá nhân gửi lệnh giữa các phase. Khi máy cá nhân kết nối lại, CLI có thể tiếp tục lấy kết quả, kiểm tra rubric, commit và đẩy lên GitHub. Trạng thái lưu ở `work/campaign/state.json`; có thể chạy lại lệnh để tiếp tục theo dõi. Phase lỗi dừng chiến dịch để sửa; không tự sinh hoặc thay thế số liệu.
+
+Mỗi phiên Kaggle có giới hạn thời gian; nếu workflow không kịp hoàn tất, adapter/checkpoint và các phase đã xong vẫn nằm trong output riêng tư để tiếp tục. Các setup dùng cùng một T4 và batch hiệu dụng tám ảnh. Bỏ `--cloud-workflow` nếu cần chia các phase thành notebook riêng, tối đa hai notebook đồng thời; cách này cần CLI trên máy cá nhân gửi từng phase tiếp theo.
 
 E4 chọn `data_size`: 10% và 100%. Baseline tốt nhất được chọn bằng validation. Điều kiện 100% tái sử dụng đúng baseline; điều kiện 10% huấn luyện riêng 300 bước. E5 dùng TRL 1.9.2, GRPO 60 bước, reward IoU đã có test.
 

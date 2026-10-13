@@ -180,7 +180,8 @@ def main():
         setup, candidates = validation_selection()
         # 100% condition reuses the exact chosen baseline run. Only data fraction
         # changes in the 10% condition; rank, LR, steps, batch and seed stay fixed.
-        evidence = list(Path("/kaggle/input").rglob(f"report/evidence/{setup}.json"))
+        local_evidence = Path(f"report/evidence/{setup}.json")
+        evidence = [local_evidence] if local_evidence.exists() else list(Path("/kaggle/input").rglob(f"report/evidence/{setup}.json"))
         if not evidence:
             raise FileNotFoundError(f"Missing baseline evidence for {setup}")
         baseline = json.loads(evidence[0].read_text(encoding="utf-8"))

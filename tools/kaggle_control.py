@@ -36,7 +36,13 @@ os.chdir(root)
 subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "torchao"], check=True)
 subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements-colab.txt", "pytest", "datasets"], check=True)
 try:
-    subprocess.run([sys.executable, "-u", "tools/kaggle_preflight.py"] if {phase!r} == "preflight" else [sys.executable, "-u", "-m", "solution.run", "--phase", {phase!r}, *{list(options)!r}], check=True)
+    if {phase!r} == "preflight":
+        command = [sys.executable, "-u", "tools/kaggle_preflight.py"]
+    elif {phase!r} == "full":
+        command = [sys.executable, "-u", "tools/kaggle_full.py"]
+    else:
+        command = [sys.executable, "-u", "-m", "solution.run", "--phase", {phase!r}, *{list(options)!r}]
+    subprocess.run(command, check=True)
 finally:
     # These are disposable copies created by prepare_data, not the input dataset.
     copies = root / "data" / "images"
@@ -58,7 +64,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("build", "push", "status", "collect", "log"))
     parser.add_argument("--owner", default="soobinms")
-    parser.add_argument("--phase", default="preflight", choices=("preflight", "smoke", "e0", "e1", "e2", "e3", "e4", "e5", "report"))
+    parser.add_argument("--phase", default="preflight", choices=("preflight", "smoke", "e0", "e1", "e2", "e3", "e4", "e5", "report", "full"))
     parser.add_argument("--source", action="append", default=[])
     parser.add_argument("--option", action="append", default=[])
     args = parser.parse_args()

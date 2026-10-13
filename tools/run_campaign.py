@@ -74,10 +74,10 @@ def remote_phase(owner,phase,sources,state):
         time.sleep(45)
 
 
-def collect_submission(owner):
-    subprocess.run([sys.executable,"tools/kaggle_control.py","collect","--phase","report","--owner",owner],cwd=ROOT,check=True)
+def collect_submission(owner,phase='report'):
+    subprocess.run([sys.executable,"tools/kaggle_control.py","collect","--phase",phase,"--owner",owner],cwd=ROOT,check=True)
     import shutil
-    download=ROOT/"work/downloads/report"
+    download=ROOT/"work/downloads"/phase
     reports=[p for p in download.rglob("REPORT.md") if (p.parent/"report/evidence/report_manifest.json").exists()]
     if len(reports)!=1:
         raise RuntimeError(f"Expected one generated final report, found {reports}")
@@ -103,6 +103,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--owner",default="soobinms")
     parser.add_argument("--smoke-already-submitted",action="store_true")
+    parser.add_argument("--cloud-workflow",action="store_true",help='Run E1–E5 and report within one Kaggle session; no local per-phase control needed.')
     args=parser.parse_args()
     state=json.loads(STATE_PATH.read_text(encoding="utf-8")) if STATE_PATH.exists() else {"phases":{},"status":"running"}
     state["status"]="running"
@@ -112,6 +113,18 @@ def main():
     save(state)
     try:
         remote_phase(args.owner,"smoke",[],state)
+        if args.cloud_workflow:
+            remote_phase(args.owner,'e0',[f'{args.owner}/day10-qwen3vl-smoke'],state)
+            sources=[f'{args.owner}/day10-qwen3vl-e0',f'{args.owner}/day10-qwen3vl-preflight']
+            if 'e1' in state['phases']:
+                remote_phase(args.owner,'e1',[f'{args.owner}/day10-qwen3vl-smoke'],state)
+                sources.append(f'{args.owner}/day10-qwen3vl-e1')
+            remote_phase(args.owner,'full',sources,state)
+            collect_submission(args.owner,'full')
+            state['status']='complete'
+            save(state)
+            print('CAMPAIGN COMPLETE — cloud workflow and submission checks passed.',flush=True)
+            return
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
             for pair in (("e0","e1"),("e2","e3")):
                 source=[f"{args.owner}/day10-qwen3vl-smoke"] if pair==("e0","e1") else [f"{args.owner}/day10-qwen3vl-e0"]
