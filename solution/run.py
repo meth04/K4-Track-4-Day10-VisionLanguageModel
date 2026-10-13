@@ -59,6 +59,8 @@ def evaluate_checkpoint(setup, run_name, meta, coord="norm1000"):
 
 def sft_phase(setup, name=None, fraction=1.0, steps=300):
     name = name or setup
+    if Path(f"report/evidence/{name}.json").exists():
+        raise FileExistsError(f"{name} already has test evidence. Reuse it rather than retraining under the same run name.")
     train = read_jsonl("data/splits/train.jsonl")
     if fraction < 1:
         random.Random(42).shuffle(train)
@@ -164,6 +166,8 @@ def main():
         generate(model, processor, val, "work/smoke_reloaded.jsonl")
         print("SMOKE PASS", flush=True)
     elif args.phase == "e0":
+        if Path("report/evidence/e0.json").exists():
+            raise FileExistsError("E0 test evidence already exists; reuse the original baseline.")
         model, processor = load_base()
         # Persist the original HF snapshot on Kaggle only. Later kernels attach
         # E0 output and load directly, avoiding repeated GPU-time downloads.
@@ -191,6 +195,8 @@ def main():
         write_json("report/evidence/ablation_selection.json", {"setup": setup, "selection_split": "val", "candidates": candidates})
         sft_phase(setup, "e4_data_size_0.1", fraction=.1, steps=args.steps or 300)
     elif args.phase == "e5":
+        if Path("report/evidence/e5.json").exists():
+            raise FileExistsError("E5 test evidence already exists; reuse the recorded run.")
         grpo_phase(args.steps or 60)
     else:
         from solution.reporting import build_report
