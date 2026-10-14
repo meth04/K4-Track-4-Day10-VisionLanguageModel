@@ -29,7 +29,7 @@ Suy luận dùng greedy decoding, max_new_tokens=512. E0/E1 yêu cầu batch=4; 
 
 Tỷ lệ parse hợp lệ: 0.4952. Tổng TP=24, FP=357, FN=559. Hai nhóm lỗi đếm được nhiều nhất là bỏ sót GT (559) và FP có IoU cùng lớp < 0.1 (240). Phân loại FP dựa trên IoU với GT cùng/khác lớp; FN và FP có thể mô tả cùng một dự đoán sai, không xem là các sự kiện độc lập. Tỷ lệ JSON hỏng là 0.5048; không mặc định quy lỗi JSON khi parser vẫn chấp nhận đầu ra. Năm output thô thật nằm trong `report/evidence/e0_raw_samples.json`. Ví dụ ảnh `vlcsnap-00200`:
 
-```text
+````text
 ```json
 [
 	{"bbox_2d": [759, 640, 843, 687], "label": "pothole"},
@@ -38,7 +38,7 @@ Tỷ lệ parse hợp lệ: 0.4952. Tổng TP=24, FP=357, FN=559. Hai nhóm lỗ
 	{"bbox_2d": [759, 640, 843, 687], "label": "manhole"}
 ]
 ```
-```
+````
 
 ## Câu 3 — Thang tọa độ
 

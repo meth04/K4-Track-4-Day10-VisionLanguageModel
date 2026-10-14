@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import random
+import re
 import shutil
 import statistics
 from PIL import Image, ImageDraw
@@ -195,6 +196,7 @@ def build_report():
     medians={c:statistics.median(areas[c]) for c in CLASSES}
     largest=max(("e1","e2","e3"),key=lambda n:evidence[n]["meta"]["peak_vram_gb"])
     output_samples=list(predictions["e0"].items())[:5]
+    sample_fence='`'*max(3,1+max((len(m.group()) for m in re.finditer(r'`+',output_samples[0][1])),default=0))
     write_json("report/evidence/e0_raw_samples.json",[{"image_id":k,"raw":v} for k,v in output_samples])
     hacks={}
     for name in ([baseline,'e5'] if has_bonus else [baseline]):
@@ -254,9 +256,9 @@ Suy luận dùng greedy decoding, max_new_tokens=512. E0/E1 yêu cầu batch=4; 
 
 Tỷ lệ parse hợp lệ: {evidence['e0']['parse_valid_rate']:.4f}. Tổng TP={e0stats['tp']}, FP={e0stats['fp']}, FN={e0stats['fn']}. Hai nhóm lỗi đếm được nhiều nhất là {top_errors[0][0]} ({top_errors[0][1]}) và {top_errors[1][0]} ({top_errors[1][1]}). Phân loại FP dựa trên IoU với GT cùng/khác lớp; FN và FP có thể mô tả cùng một dự đoán sai, không xem là các sự kiện độc lập. Tỷ lệ JSON hỏng là {1-evidence['e0']['parse_valid_rate']:.4f}; không mặc định quy lỗi JSON khi parser vẫn chấp nhận đầu ra. Năm output thô thật nằm trong `report/evidence/e0_raw_samples.json`. Ví dụ ảnh `{output_samples[0][0]}`:
 
-```text
+{sample_fence}text
 {output_samples[0][1]}
-```
+{sample_fence}
 
 ## Câu 3 — Thang tọa độ
 
