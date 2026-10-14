@@ -11,7 +11,7 @@ import time
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from tools.kaggle_control import build
+from tools.kaggle_control import build, refresh_oauth
 
 os.environ["PYTHONUTF8"]="1"
 LOCK=threading.Lock()
@@ -27,6 +27,7 @@ def save(state):
 
 
 def cli(*args):
+    refresh_oauth()
     completed=subprocess.run([sys.executable,"-m","kaggle",*args],cwd=ROOT,capture_output=True,text=True,encoding="utf-8")
     if completed.returncode:
         raise RuntimeError(completed.stderr or completed.stdout)

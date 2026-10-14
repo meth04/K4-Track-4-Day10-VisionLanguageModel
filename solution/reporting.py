@@ -236,7 +236,7 @@ GitHub: {student['github_username']}; Kaggle: {student['kaggle_username']}
 
 Chạy trên Kaggle, GPU {preflight['gpu']} ({preflight['gpu_memory_gb']:.2f} GiB), chỉ một GPU được nhìn thấy qua CUDA_VISIBLE_DEVICES=0. Đề gốc dùng Colab T4; đây là thay đổi nền tảng và được ghi rõ. Không chạy model trên máy cá nhân. Phiên bản thư viện thực tế nằm trong `report/evidence/preflight.json`. Mã của bài ở `solution/`; `scripts/` và `tests/` giữ nguyên. SFT dùng batch=2, tích lũy=4, 300 bước, LR=2e-4, seed=42. Để tiết kiệm VRAM và thời gian, LM head chỉ tính logits ở vị trí có next-token label khác -100; cross entropy và mask giữ nguyên, được đối chiếu với loss đầy đủ trong thử GPU. Checkpoint chọn theo 40 ảnh validation cố định; báo cáo thêm kết quả trên toàn bộ validation. Mỗi setup suy luận test một lần. Thời gian huấn luyện đo riêng các bước tối ưu, không gồm validation; tổng thời gian chạy sẽ lớn hơn.
 
-Suy luận dùng greedy decoding, max_new_tokens=512. E0/E1 yêu cầu batch=4; E2–E5 yêu cầu batch=8 và tự giảm khi thiếu VRAM. E4 dùng cùng cấu hình suy luận với baseline E3. Các thời gian trong bảng là số đo của cấu hình thực tế này.
+Suy luận dùng greedy decoding, max_new_tokens=512. E0/E1 yêu cầu batch=4; E2–E5 yêu cầu batch=8 và tự giảm khi thiếu VRAM. E4 dùng cùng cấu hình suy luận với baseline {baseline.upper()}. Các thời gian trong bảng là số đo của cấu hình thực tế này.
 
 ## Bảng tổng hợp
 
@@ -281,6 +281,8 @@ Frame lân cận từ cùng video gần giống nhau: chia ngẫu nhiên sẽ đ
 ## Câu 7 — So sánh E1/E2/E3
 
 Bảng trên ghi cả lợi ích F1 và chi phí thực tế. E1 cải thiện so với E0 ΔF1={gain:.4f}. Setup chọn cho E4/E5 là {baseline.upper()}, dựa trên validation, không dựa trên test. Setup dùng VRAM nhiều nhất trong E1–E3 là {largest.upper()}, đạt {evidence[largest]['meta']['peak_vram_gb']:.2f} GiB. Huấn luyện projector cần gradient và trạng thái optimizer; LoRA ViT cần truyền gradient qua bộ mã hóa ảnh. Giá trị F1 cao nhất chưa tự nó chứng minh phương án đáng dùng nếu chi phí tăng và CI chênh lệch còn chứa 0.
+
+Trong lần chạy này, E3 so với E2 đổi F1 {evidence['e3']['micro']['f1']-evidence['e2']['micro']['f1']:+.4f}, VRAM đỉnh {evidence['e3']['meta']['peak_vram_gb']-evidence['e2']['meta']['peak_vram_gb']:+.2f} GiB và thời gian huấn luyện {evidence['e3']['meta']['train_minutes']-evidence['e2']['meta']['train_minutes']:+.2f} phút. Với mục tiêu F1 và T4 còn đủ VRAM, mình chọn {baseline.upper()} theo validation. E2 là phương án tiết kiệm thời gian huấn luyện hơn E3; độ chắc chắn về chênh lệch F1 được xét bằng CI cặp dưới đây.
 
 {chr(10).join(comparison_lines[:3])}
 

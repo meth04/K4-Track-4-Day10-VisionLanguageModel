@@ -7,11 +7,30 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import threading
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 os.environ["PYTHONUTF8"] = "1"
 DATASET = "lorenzoarcioni/road-damage-dataset-potholes-cracks-and-manholes"
+OAUTH_LOCK = threading.Lock()
+
+
+def refresh_oauth():
+    """Refresh before actual expiry; this SDK checks thirty minutes too late."""
+    from datetime import datetime, timedelta, timezone
+    from kaggle.api.kaggle_api_extended import KaggleApi, KaggleCredentials
+    with OAUTH_LOCK:
+        api=KaggleApi()
+        api._load_config()
+        if api.config_values.get(api.CONFIG_NAME_TOKEN) or api.config_values.get(api.CONFIG_NAME_KEY):
+            return
+        with api.build_kaggle_client() as client:
+            credentials=KaggleCredentials.load(client)
+            if credentials is not None:
+                expiry=credentials._access_token_expiration
+                if expiry is None or expiry <= datetime.now(timezone.utc)+timedelta(minutes=5):
+                    credentials.refresh_access_token()
 
 
 def build(owner, phase, sources=(), options=()):
@@ -68,6 +87,8 @@ def main():
     parser.add_argument("--source", action="append", default=[])
     parser.add_argument("--option", action="append", default=[])
     args = parser.parse_args()
+    if args.action != 'build':
+        refresh_oauth()
     ref = f"{args.owner}/day10-qwen3vl-{args.phase}"
     if args.action in ("build", "push"):
         directory, ref = build(args.owner, args.phase, args.source, args.option)
