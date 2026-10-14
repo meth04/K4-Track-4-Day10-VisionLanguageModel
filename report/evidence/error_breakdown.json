@@ -1,0 +1,52 @@
+{
+  "e0": {
+    "counts": {
+      "JSON hỏng": 157,
+      "bỏ sót GT": 559,
+      "box trùng": 1,
+      "sai lớp với IoU ≥ 0.5": 15,
+      "sai định vị, IoU cùng lớp 0.1–0.5": 101,
+      "FP có IoU cùng lớp < 0.1": 240
+    },
+    "median_area_percent_by_match": {
+      "pothole": {
+        "matched": 0.7929673089999988,
+        "missed": 0.4049476562500006
+      },
+      "crack": {
+        "matched": 7.3131192881999985,
+        "missed": 1.9700498958000021
+      },
+      "manhole": {
+        "matched": 1.1089432985999996,
+        "missed": 0.6510427083000005
+      }
+    },
+    "note": "FN and FP categories can describe the same wrong prediction; counts are not disjoint events."
+  },
+  "e3": {
+    "counts": {
+      "JSON hỏng": 0,
+      "bỏ sót GT": 344,
+      "box trùng": 0,
+      "sai lớp với IoU ≥ 0.5": 44,
+      "sai định vị, IoU cùng lớp 0.1–0.5": 116,
+      "FP có IoU cùng lớp < 0.1": 101
+    },
+    "median_area_percent_by_match": {
+      "pothole": {
+        "matched": 0.4383678993000004,
+        "missed": 0.4192700868000003
+      },
+      "crack": {
+        "matched": 2.3862837499999996,
+        "missed": 1.8524332985999998
+      },
+      "manhole": {
+        "matched": 0.8203125,
+        "missed": 0.4479157812500012
+      }
+    },
+    "note": "FN and FP categories can describe the same wrong prediction; counts are not disjoint events."
+  }
+}

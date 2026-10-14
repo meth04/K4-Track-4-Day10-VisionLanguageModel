@@ -1,0 +1,8 @@
+{
+  "e3": {
+    "empty_rate": 0.0,
+    "invalid_rate": 0.0,
+    "giant_box_rate": 0.0,
+    "mean_iou_reward": 0.46753244199561156
+  }
+}

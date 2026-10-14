@@ -1,0 +1,8 @@
+{
+  "image_id": "vlcsnap-2025-02-26-20h36m10s957",
+  "vision_tokens": 220,
+  "masked_tokens": 335,
+  "supervised_tokens": 58,
+  "decoded_supervision": "[{\"label\":\"crack\",\"bbox_2d\":[583,583,895,897]},{\"label\":\"crack\",\"bbox_2d\":[358,586,548,825]}]<|im_end|>\n",
+  "answer": "[{\"label\":\"crack\",\"bbox_2d\":[583,583,895,897]},{\"label\":\"crack\",\"bbox_2d\":[358,586,548,825]}]"
+}

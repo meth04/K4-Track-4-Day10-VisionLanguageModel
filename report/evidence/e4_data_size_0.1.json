@@ -1,0 +1,86 @@
+{
+  "n_images": 311,
+  "parse_valid_rate": 0.9839228295819936,
+  "missing_predictions": 0,
+  "micro": {
+    "precision": 0.22445820433436534,
+    "recall": 0.24871355060034306,
+    "f1": 0.23596419853539463,
+    "tp": 145,
+    "fp": 501,
+    "fn": 438
+  },
+  "per_class": {
+    "pothole": {
+      "precision": 0.18382352941176472,
+      "recall": 0.2066115702479339,
+      "f1": 0.19455252918287938,
+      "tp": 25,
+      "fp": 111,
+      "fn": 96
+    },
+    "crack": {
+      "precision": 0.14719626168224298,
+      "recall": 0.21070234113712374,
+      "f1": 0.1733149931224209,
+      "tp": 63,
+      "fp": 365,
+      "fn": 236
+    },
+    "manhole": {
+      "precision": 0.6951219512195121,
+      "recall": 0.3496932515337423,
+      "f1": 0.46530612244897956,
+      "tp": 57,
+      "fp": 25,
+      "fn": 106
+    },
+    "other": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0
+    }
+  },
+  "mean_iou": 0.6586162529572452,
+  "fp_per_image": 1.6109324758842443,
+  "f1_ci95": [
+    0.20265003897116132,
+    0.27079934747145185
+  ],
+  "score_version": 1,
+  "name": "E4_DATA_SIZE_0.1",
+  "dataset_version": "d10-21e4070301",
+  "split": "test",
+  "coord": "norm1000",
+  "meta": {
+    "setup": "e3",
+    "rank": 16,
+    "matched_module_count": 348,
+    "trainable_params": 148426752,
+    "projector_trainable_params": 109105152,
+    "train_fraction": 0.1,
+    "ablation_variable": "data_size",
+    "loss_implementation": "response logits only; equivalent shifted cross entropy",
+    "inference_batch_size_requested": 8,
+    "step": 300,
+    "train_minutes": 48.78933072289997,
+    "peak_vram_gb": 6.907968997955322,
+    "batch_size": 2,
+    "grad_accum": 4,
+    "max_steps": 300,
+    "lr": 0.0002,
+    "seed": 42,
+    "coord": "norm1000",
+    "n_train_images": 142,
+    "best_validation_f1": 0.1782178217821782,
+    "training_steps_completed": 300,
+    "selected_checkpoint_step": 100,
+    "test_inference_minutes": 11.561196665516658,
+    "model_revision": "ebb281ec70b05090aa6165b016eac8ec08e71b17",
+    "platform": "Kaggle",
+    "gpu": "Tesla T4"
+  }
+}

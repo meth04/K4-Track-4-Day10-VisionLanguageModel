@@ -1,0 +1,89 @@
+{
+  "n_images": 311,
+  "parse_valid_rate": 1.0,
+  "missing_predictions": 0,
+  "micro": {
+    "precision": 0.478,
+    "recall": 0.4099485420240137,
+    "f1": 0.44136657433056325,
+    "tp": 239,
+    "fp": 261,
+    "fn": 344
+  },
+  "per_class": {
+    "pothole": {
+      "precision": 0.3617021276595745,
+      "recall": 0.2809917355371901,
+      "f1": 0.31627906976744186,
+      "tp": 34,
+      "fp": 60,
+      "fn": 87
+    },
+    "crack": {
+      "precision": 0.3701067615658363,
+      "recall": 0.34782608695652173,
+      "f1": 0.3586206896551724,
+      "tp": 104,
+      "fp": 177,
+      "fn": 195
+    },
+    "manhole": {
+      "precision": 0.808,
+      "recall": 0.6196319018404908,
+      "f1": 0.7013888888888888,
+      "tp": 101,
+      "fp": 24,
+      "fn": 62
+    },
+    "other": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0
+    }
+  },
+  "mean_iou": 0.6957379904565351,
+  "fp_per_image": 0.8392282958199357,
+  "f1_ci95": [
+    0.4003466204506066,
+    0.48543689320388345
+  ],
+  "score_version": 1,
+  "name": "E4_DATA_SIZE_1.0",
+  "dataset_version": "d10-21e4070301",
+  "split": "test",
+  "coord": "norm1000",
+  "meta": {
+    "setup": "e3",
+    "rank": 16,
+    "matched_module_count": 348,
+    "trainable_params": 148426752,
+    "projector_trainable_params": 109105152,
+    "train_fraction": 1.0,
+    "ablation_variable": "data_size",
+    "loss_implementation": "response logits only; equivalent shifted cross entropy",
+    "inference_batch_size_requested": 8,
+    "step": 300,
+    "train_minutes": 55.626676862733326,
+    "peak_vram_gb": 7.1418023109436035,
+    "batch_size": 2,
+    "grad_accum": 4,
+    "max_steps": 300,
+    "lr": 0.0002,
+    "seed": 42,
+    "coord": "norm1000",
+    "n_train_images": 1422,
+    "best_validation_f1": 0.3351351351351351,
+    "training_steps_completed": 300,
+    "selected_checkpoint_step": 300,
+    "test_inference_minutes": 8.980588221083341,
+    "model_revision": "ebb281ec70b05090aa6165b016eac8ec08e71b17",
+    "platform": "Kaggle",
+    "gpu": "Tesla T4",
+    "base_setup": "e3",
+    "reused_evidence": "e3",
+    "selection_split": "val"
+  }
+}
