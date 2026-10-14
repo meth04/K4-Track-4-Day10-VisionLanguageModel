@@ -215,9 +215,19 @@ def build_report():
     top_errors=sorted(breakdown['e0']['counts'].items(),key=lambda item:item[1],reverse=True)[:2]
     bonus_section='Hàm reward IoU và các test đã hoàn tất. Chưa có kết quả GRPO E5 trong bản báo cáo này; không coi đây là bằng chứng đã chạy bonus.'
     if has_bonus:
+        hacking_rows='\n'.join(f"| {name.upper()} | {100*hacks[name]['empty_rate']:.2f}% | {100*hacks[name]['giant_box_rate']:.2f}% | {100*hacks[name]['invalid_rate']:.2f}% | {hacks[name]['mean_iou_reward']:.4f} |" for name in (baseline,'e5'))
+        empty_change=100*(hacks['e5']['empty_rate']-hacks[baseline]['empty_rate'])
+        giant_change=100*(hacks['e5']['giant_box_rate']-hacks[baseline]['giant_box_rate'])
+        hacking_conclusion='Có mức tăng ở ít nhất một chỉ báo trả rỗng/box lớn; đây là dấu hiệu cần kiểm tra, chưa tự chứng minh reward hacking.' if empty_change>0 or giant_change>0 else 'Không thấy mức tăng của hai chỉ báo trả rỗng và box lớn trên tập test này; kết quả không loại trừ các dạng reward hacking khác.'
         bonus_section=f'''Khởi tạo từ checkpoint SFT chọn bằng validation, dùng reward IoU cùng lớp, ghép tham lam với IoU≥0,5, phạt box thừa qua mẫu số. Các test gồm hoàn hảo, JSON hỏng, sai lớp, box thừa, rỗng và box lớn. GRPO dùng 4 generations, tối đa 128 token, beta=0, LR=5e-6, 60 bước, use_vllm=False. Log thật ở `report/logs/e5/grpo.log.json`. {comparison_lines[4]}
 
-Kiểm tra reward hacking trên output test thật: {json.dumps(hacks,ensure_ascii=False)}. Tỷ lệ trả [] và box có diện tích tương đương ít nhất 50% khung hình được đối chiếu với SFT; không kết luận chỉ từ reward tăng vì model có thể tận dụng thành phần thưởng JSON hợp lệ. Max completion 128 còn có thể cắt đầu ra có nhiều đối tượng; tỷ lệ parse hợp lệ và FP/FN giúp phát hiện giới hạn đó.'''
+Kiểm tra reward hacking trên output test thật; box lớn có diện tích ít nhất 50% khung hình:
+
+| Setup | Trả [] | Có box lớn | JSON hỏng | Reward IoU trung bình |
+|---|---|---|---|---|
+{hacking_rows}
+
+So với SFT, tỷ lệ trả [] đổi {empty_change:+.2f} điểm phần trăm và tỷ lệ có box lớn đổi {giant_change:+.2f} điểm phần trăm. {hacking_conclusion} Không kết luận chất lượng tăng chỉ từ reward vì model có thể tận dụng thành phần thưởng JSON hợp lệ. Max completion 128 còn có thể cắt đầu ra có nhiều đối tượng; tỷ lệ parse hợp lệ và FP/FN giúp phát hiện giới hạn đó. Các số đo trong bảng nằm ở `report/evidence/reward_hacking.json`.'''
     report=f'''Họ tên: {student['name']}
 GitHub: {student['github_username']}; Kaggle: {student['kaggle_username']}
 `dataset_version`: {meta['dataset_version']}
