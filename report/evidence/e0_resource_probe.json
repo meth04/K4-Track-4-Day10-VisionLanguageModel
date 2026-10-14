@@ -1,0 +1,15 @@
+{
+  "split": "val",
+  "n_images": 4,
+  "image_ids": [
+    "vlcsnap-2025-02-18-18h30m17s408",
+    "vlcsnap-2025-02-18-18h30m20s293",
+    "vlcsnap-2025-02-18-18h30m22s081",
+    "vlcsnap-2025-02-18-18h30m24s122"
+  ],
+  "batch_size": 4,
+  "max_new_tokens": 512,
+  "peak_vram_gb": 3.9457263946533203,
+  "inference_minutes": 0.8744581865166652,
+  "scope": "Original E0 weights, four validation images, no repeated test inference."
+}
