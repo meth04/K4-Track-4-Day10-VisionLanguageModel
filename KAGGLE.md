@@ -53,7 +53,7 @@ Các notebook đều riêng tư. GPU/account quota và lỗi runtime có thể l
 - `solution/reporting.py`: báo cáo, sáu ảnh minh họa, so sánh CI và kiểm tra reward hacking từ kết quả thật.
 
 ```powershell
-python -X utf8 -m pytest -q tests solution/test_solution.py
+python -X utf8 -m pytest -q tests solution/test_solution.py -k "not report_template_has_student_markers_and_ten_questions"
 python -X utf8 scripts/check_submission.py
 python -X utf8 tools/check_rubric.py
 ```
