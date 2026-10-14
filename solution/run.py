@@ -116,14 +116,31 @@ def grpo_phase(steps=60):
     config = GRPOConfig(output_dir=str(directory / "trainer"), max_steps=steps, learning_rate=5e-6, per_device_train_batch_size=1, gradient_accumulation_steps=4, generation_batch_size=4, num_generations=4, max_completion_length=128, beta=0.0, use_vllm=False, fp16=True, bf16=False, gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant": False}, loss_type="grpo", remove_unused_columns=False, report_to="none", logging_steps=1, save_strategy="no", seed=42, dataloader_num_workers=0, log_completions=True, log_multimodal=False, model_init_kwargs=None)
     start = time.perf_counter()
     torch.cuda.reset_peak_memory_stats()
-    info = {**original, "base_setup": setup, "selection_split": "val", "selection_candidates": candidates, "num_generations": 4, "max_completion_length": 128, "grpo_steps": steps, "initialization_checkpoint_step":original.get('step'), "lr":5e-6, "batch_size":1, "grad_accum":4, "max_steps":steps}
+    info = {**original, "base_setup": setup, "selection_split": "val", "selection_candidates": candidates, "num_generations": 4, "max_completion_length": 128, "grpo_steps": steps, "initialization_checkpoint_step":original.get('step'), "lr":5e-6, "batch_size":1, "grad_accum":4, "max_steps":steps, "rollout_autocast":"float16", "rollout_use_cache":True}
+
+    class T4GRPOTrainer(GRPOTrainer):
+        def _generate_and_score_completions(self, inputs):
+            # Transformers pre-encodes VLM images outside model.forward, so
+            # Accelerate's forward autocast does not cover this encoder call.
+            # Keep the FP32 trainable projector under fp16 AMP for all rollout
+            # work, including the no-grad old-policy probability calculation.
+            was_cache=set_cache(self.model,True)
+            try:
+                with torch.autocast('cuda',dtype=torch.float16):
+                    return super()._generate_and_score_completions(inputs)
+            finally:
+                set_cache(self.model,was_cache)
+                # TRL's unwrap helper re-enables checkpointing with defaults.
+                # Retain non-reentrant checkpointing for the vision adapters.
+                if self.args.gradient_checkpointing:
+                    self.model.gradient_checkpointing_enable(gradient_checkpointing_kwargs=self.args.gradient_checkpointing_kwargs)
 
     class ProjectorCheckpoint(TrainerCallback):
         def on_step_end(self, args, state, control, **kwargs):
             if state.global_step % 20 == 0:
                 save_checkpoint(kwargs["model"], processor, directory / "latest", {**info, "step": state.global_step})
 
-    trainer = GRPOTrainer(model=model, args=config, reward_funcs=grounding_reward, train_dataset=dataset, processing_class=processor, callbacks=[ProjectorCheckpoint()])
+    trainer = T4GRPOTrainer(model=model, args=config, reward_funcs=grounding_reward, train_dataset=dataset, processing_class=processor, callbacks=[ProjectorCheckpoint()])
     # TRL 1.9.2 upcasts quantized-model trainables to bf16 during construction.
     # T4 uses fp16 AMP, so restore trainable weights to fp32 before optimizer creation.
     for parameter in model.parameters():
