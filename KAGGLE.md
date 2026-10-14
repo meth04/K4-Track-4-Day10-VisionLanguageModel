@@ -53,10 +53,12 @@ Các notebook đều riêng tư. GPU/account quota và lỗi runtime có thể l
 - `solution/reporting.py`: báo cáo, sáu ảnh minh họa, so sánh CI và kiểm tra reward hacking từ kết quả thật.
 
 ```powershell
-python -m pytest -q tests solution/test_solution.py
-python scripts/check_submission.py
-python tools/check_rubric.py
+python -X utf8 -m pytest -q tests solution/test_solution.py
+python -X utf8 scripts/check_submission.py
+python -X utf8 tools/check_rubric.py
 ```
+
+Trên Windows, `-X utf8` giúp terminal in đúng tiếng Việt trong kết quả kiểm tra. Bộ điều phối tự đặt UTF-8 cho các lệnh con.
 
 Trước khi có các lượt chạy thật, hai lệnh kiểm tra bài nộp sẽ báo thiếu bằng chứng/báo cáo. Sau khi điền báo cáo, test gốc `test_report_template_has_student_markers_and_ten_questions` vẫn yêu cầu `<điền` vì nó kiểm tra *mẫu đề*, trái với yêu cầu bài nộp hoàn chỉnh. Không sửa test gốc; kiểm tra các test còn lại với `-k "not report_template_has_student_markers_and_ten_questions"`, rồi dùng hai bộ kiểm tra bài nộp để xác nhận báo cáo hoàn chỉnh.
 
